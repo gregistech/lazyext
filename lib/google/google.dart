@@ -3,6 +3,34 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:extension_google_sign_in_as_googleapis_auth/extension_google_sign_in_as_googleapis_auth.dart';
 import 'package:http/http.dart';
 
+typedef ApiCreator<A> = A Function(Client);
+
+class GoogleApi<A> {
+  List<String> get scopes {
+    return [];
+  }
+
+  final Google _google;
+  final ApiCreator<A> _apiCreator;
+  A? api;
+
+  GoogleApi(this._google, this._apiCreator) {
+    Future<bool> result = _google.requestScopes(scopes);
+    result.then((bool resullt) async {
+      Client? client = await _google.getAuthenticatedClient();
+      if (client != null) {
+        api = _apiCreator(client);
+      }
+    });
+  }
+
+  Future<void> waitForApi() async {
+    while (api == null) {
+      await Future.delayed(const Duration(microseconds: 100));
+    }
+  }
+}
+
 class Google extends ChangeNotifier {
   late final GoogleSignIn _api = GoogleSignIn(scopes: _scopes);
   List<String> _scopes = [];

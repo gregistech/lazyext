@@ -66,7 +66,9 @@ class AssignmentView extends StatelessWidget {
       if (material.driveFile != null) {
         materials.add(TextButton(
           child: Text(material.driveFile?.driveFile?.title ?? "UNKNOWN"),
-          onPressed: () {},
+          onPressed: () {
+            context.push("/compare", extra: "");
+          },
         ));
       }
     }
