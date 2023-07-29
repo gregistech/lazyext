@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lazyext/screens/screen.dart';
 
 import '../widgets/assignment.dart';
 
@@ -8,17 +9,8 @@ class AssignmentScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Assignment")),
-      body: Flex(
-        direction: Axis.vertical,
-        children: [
-          Expanded(
-            child: AssignmentView(assignment: assignment),
-          )
-        ],
-      ),
-    );
+    return ScreenWidget(
+        title: "Assignment", child: AssignmentView(assignment: assignment));
   }
 }
 
@@ -33,19 +25,10 @@ class AssignmentsScreen extends StatefulWidget {
 class _AssignmentsScreenState extends State<AssignmentsScreen> {
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Assignments"),
-      ),
-      body: Flex(
-        direction: Axis.vertical,
-        children: [
-          Expanded(
-            child: AssignmentListView(
-              courseId: widget.courseId,
-            ),
-          )
-        ],
+    return ScreenWidget(
+      title: "Assignments",
+      child: AssignmentListView(
+        courseId: widget.courseId,
       ),
     );
   }

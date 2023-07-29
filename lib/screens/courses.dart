@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:lazyext/widgets/course.dart';
 
+import 'screen.dart';
+
 class CoursesScreen extends StatefulWidget {
   const CoursesScreen({super.key});
 
@@ -11,18 +13,9 @@ class CoursesScreen extends StatefulWidget {
 class _CoursesScreenState extends State<CoursesScreen> {
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Courses"),
-      ),
-      body: const Flex(
-        direction: Axis.vertical,
-        children: [
-          Expanded(
-            child: CoursesListView(),
-          )
-        ],
-      ),
+    return const ScreenWidget(
+      title: "Courses",
+      child: CoursesListView(),
     );
   }
 }
