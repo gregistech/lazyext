@@ -28,7 +28,12 @@ class _GPaginatedListViewState<T, R> extends State<GPaginatedListView<T, R>> {
 
   Future<void> _handlePageRequest(T? token) async {
     (List<R>, T?) page = await widget.getPage(widget.pageSize, token);
-    _pagingController.appendPage(page.$1, page.$2);
+    try {
+      _pagingController.appendPage(page.$1, page.$2);
+    } on FlutterError {
+      // Could be scheduled after dispose, which causes a crash.
+      return;
+    }
     if (widget.shouldSort) {
       _pagingController.itemList?.sort(widget.comparator);
     }

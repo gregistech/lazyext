@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lazyext/widgets/assignment.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 
@@ -37,6 +38,12 @@ class MainWidget extends StatelessWidget {
           path: '/course/:course/assignment',
           builder: (context, state) =>
               AssignmentsScreen(courseId: state.pathParameters["course"] ?? ""),
+          redirect: authRedirect),
+      GoRoute(
+          path: '/course/assignment',
+          builder: (context, state) => AssignmentScreen(
+                assignment: state.extra as Assignment,
+              ),
           redirect: authRedirect),
     ],
   );

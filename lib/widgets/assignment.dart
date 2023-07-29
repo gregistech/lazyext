@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart' hide Material;
+import 'package:go_router/go_router.dart';
 import 'package:googleapis/classroom/v1.dart';
 import 'package:provider/provider.dart';
 
@@ -46,8 +47,37 @@ class AssignmentListItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return TextButton(
-      child: Text("${assignment.name} (${assignment.creationTime})"),
-      onPressed: () {},
+      child: Text(assignment.name),
+      onPressed: () {
+        context.push("/course/assignment", extra: assignment);
+      },
+    );
+  }
+}
+
+class AssignmentView extends StatelessWidget {
+  final Assignment assignment;
+  const AssignmentView({super.key, required this.assignment});
+
+  @override
+  Widget build(BuildContext context) {
+    List<Widget> materials = [];
+    for (Material material in assignment.materials) {
+      if (material.driveFile != null) {
+        materials.add(TextButton(
+          child: Text(material.driveFile?.driveFile?.title ?? "UNKNOWN"),
+          onPressed: () {},
+        ));
+      }
+    }
+    return Column(
+      children: [
+        Text(assignment.name),
+        Text(assignment.text),
+        Column(
+          children: materials,
+        )
+      ],
     );
   }
 }

@@ -14,7 +14,7 @@ class CourseListItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return TextButton(
       child: Text(course.name ?? "UNKNOWN"),
-      onPressed: () => context.go("/course/${course.id}/assignment"),
+      onPressed: () => context.push("/course/${course.id}/assignment"),
     );
   }
 }
