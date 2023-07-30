@@ -3,6 +3,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:extension_google_sign_in_as_googleapis_auth/extension_google_sign_in_as_googleapis_auth.dart';
 import 'package:http/http.dart';
 
+// See https://github.com/dart-lang/sdk/issues/30074, come on...
 typedef ApiCreator<A> = A Function(Client);
 
 class GoogleApi<A> {
@@ -28,6 +29,11 @@ class GoogleApi<A> {
     while (api == null) {
       await Future.delayed(const Duration(microseconds: 100));
     }
+  }
+
+  Future<R?> getResponse<R>(Future<R?>? Function() request) async {
+    await waitForApi();
+    return await request();
   }
 }
 

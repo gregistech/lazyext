@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:googleapis/classroom/v1.dart' hide Assignment;
-import 'package:http/http.dart';
 import 'package:lazyext/widgets/assignment.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 
 import 'google/classroom.dart';
+import 'google/drive.dart';
 import 'google/google.dart';
 import 'screens/compare.dart';
 import 'screens/courses.dart';
@@ -62,8 +61,9 @@ class MainWidget extends StatelessWidget {
           create: (_) => Google(),
         ),
         ListenableProxyProvider<Google, Classroom>(
-            update: (_, google, __) =>
-                Classroom(google, (Client client) => ClassroomApi(client)))
+            update: (_, google, __) => Classroom(google)),
+        ListenableProxyProvider<Google, Drive>(
+            update: (_, google, __) => Drive(google))
       ],
       child: MaterialApp.router(
         title: 'LazyExt',

@@ -28,11 +28,14 @@ class CompareView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TabBarView(children: [
-      OriginalView(
-        path: path,
-      ),
-      const ExtractedView()
-    ]);
+    return DefaultTabController(
+      length: 2,
+      child: TabBarView(children: [
+        OriginalView(
+          path: path,
+        ),
+        const ExtractedView()
+      ]),
+    );
   }
 }

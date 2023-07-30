@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart' hide Material;
 import 'package:go_router/go_router.dart';
 import 'package:googleapis/classroom/v1.dart';
+import 'package:googleapis/drive/v3.dart' hide Drive;
 import 'package:provider/provider.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../google/classroom.dart';
+import '../google/drive.dart';
 import 'g_paginated_list_view.dart';
 
 class Assignment implements Comparable<Assignment> {
@@ -63,12 +66,41 @@ class AssignmentView extends StatelessWidget {
   Widget build(BuildContext context) {
     List<Widget> materials = [];
     for (Material material in assignment.materials) {
-      if (material.driveFile != null) {
-        materials.add(TextButton(
-          child: Text(material.driveFile?.driveFile?.title ?? "UNKNOWN"),
-          onPressed: () {
-            context.push("/compare", extra: "");
-          },
+      DriveFile? driveFile = material.driveFile?.driveFile;
+      if (driveFile != null) {
+        materials.add(FutureBuilder(
+          future: Provider.of<Drive>(context, listen: false)
+              .driveFileToFile(driveFile),
+          builder: (BuildContext context, AsyncSnapshot<File?> snapshot) =>
+              TextButton(
+            child: Text(snapshot.data?.name ?? "UNKNOWN"),
+            onPressed: () async {
+              File? file = snapshot.data;
+              if (file != null) {
+                File? gdoc = await Provider.of<Drive>(context, listen: false)
+                    .fileToGoogleDoc(file);
+                if (gdoc != null) {
+                  // ignore: use_build_context_synchronously
+                  if (!context.mounted) return;
+                  Media? pdf = await Provider.of<Drive>(context, listen: false)
+                      .fileToPdf(gdoc);
+                  if (pdf != null) {
+                    // ignore: use_build_context_synchronously
+                    if (!context.mounted) return;
+                    String? path = await Provider.of<Drive>(context,
+                            listen: false)
+                        .downloadMedia(pdf,
+                            "${(await getApplicationDocumentsDirectory()).path}/test.pdf");
+                    if (path != null) {
+                      // ignore: use_build_context_synchronously
+                      if (!context.mounted) return;
+                      context.push("/compare", extra: path);
+                    }
+                  }
+                }
+              }
+            },
+          ),
         ));
       }
     }
