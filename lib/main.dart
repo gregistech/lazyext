@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:googleapis/classroom/v1.dart' hide Assignment;
 import 'package:lazyext/widgets/assignment.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -33,13 +34,13 @@ class MainWidget extends StatelessWidget {
         builder: (context, state) => const LoginScreen(),
       ),
       GoRoute(
-          path: '/course',
+          path: '/courses',
           builder: (context, state) => const CoursesScreen(),
           redirect: authRedirect),
       GoRoute(
-          path: '/course/:course/assignment',
+          path: '/course/assignments',
           builder: (context, state) =>
-              AssignmentsScreen(courseId: state.pathParameters["course"] ?? ""),
+              AssignmentsScreen(course: state.extra as Course),
           redirect: authRedirect),
       GoRoute(
           path: '/course/assignment',

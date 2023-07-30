@@ -117,8 +117,8 @@ class AssignmentView extends StatelessWidget {
 }
 
 class AssignmentListView extends StatefulWidget {
-  final String courseId;
-  const AssignmentListView({super.key, required this.courseId});
+  final Course course;
+  const AssignmentListView({super.key, required this.course});
 
   @override
   State<AssignmentListView> createState() => _AssignmentListViewState();
@@ -137,13 +137,13 @@ class _AssignmentListViewState extends State<AssignmentListView> {
               reachedLast[0]
                   ? null
                   : Provider.of<Classroom>(context, listen: false)
-                      .getAnnouncements(widget.courseId,
+                      .getAnnouncements(widget.course,
                           pageSize: pageSize - sizeCourseWork,
                           token: token?.$1);
           Future<(List<CourseWork>, String?)>? courseWorkJob = reachedLast[1]
               ? null
               : Provider.of<Classroom>(context, listen: false).getCourseWork(
-                  widget.courseId,
+                  widget.course,
                   pageSize: sizeCourseWork,
                   token: token?.$2);
 

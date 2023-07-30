@@ -22,18 +22,29 @@ class Classroom extends GoogleApi<ClassroomApi> with ChangeNotifier {
     return (response?.courses ?? [], response?.nextPageToken);
   }
 
-  Future<(List<CourseWork>, String?)> getCourseWork(String id,
+  Future<(List<CourseWork>, String?)> getCourseWork(Course course,
       {int pageSize = 20, String? token}) async {
-    ListCourseWorkResponse? response = await getResponse(() =>
-        api?.courses.courseWork.list(id, pageToken: token, pageSize: pageSize));
-    return (response?.courseWork ?? [], response?.nextPageToken);
+    String? id = course.id;
+    if (id != null) {
+      ListCourseWorkResponse? response = await getResponse(() => api
+          ?.courses.courseWork
+          .list(id, pageToken: token, pageSize: pageSize));
+      return (response?.courseWork ?? [], response?.nextPageToken);
+    } else {
+      return ([] as List<CourseWork>, null);
+    }
   }
 
-  Future<(List<Announcement>, String?)> getAnnouncements(String id,
+  Future<(List<Announcement>, String?)> getAnnouncements(Course course,
       {int pageSize = 20, String? token}) async {
-    ListAnnouncementsResponse? response = await getResponse(() => api
-        ?.courses.announcements
-        .list(id, pageToken: token, pageSize: pageSize));
-    return (response?.announcements ?? [], response?.nextPageToken);
+    String? id = course.id;
+    if (id != null) {
+      ListAnnouncementsResponse? response = await getResponse(() => api
+          ?.courses.announcements
+          .list(id, pageToken: token, pageSize: pageSize));
+      return (response?.announcements ?? [], response?.nextPageToken);
+    } else {
+      return ([] as List<Announcement>, null);
+    }
   }
 }
