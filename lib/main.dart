@@ -27,7 +27,7 @@ class MainWidget extends StatelessWidget {
   }
 
   late final _router = GoRouter(
-    initialLocation: "/course",
+    initialLocation: "/courses",
     routes: [
       GoRoute(
         path: '/login',

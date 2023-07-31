@@ -11,7 +11,7 @@ class LoginScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Provider.of<Google>(context, listen: false).onUserChange((account) {
-      context.go("/course");
+      context.go("/courses");
     });
     return ScreenWidget(
       title: "Login",
