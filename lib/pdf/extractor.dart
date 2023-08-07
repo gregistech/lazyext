@@ -21,6 +21,7 @@ class Exercise {
 
 class ExerciseExtractor {
   RegExp exerciseRegex = RegExp(r"^[1-9]\d*\.");
+  mupdf.Rect offset = mupdf.Rect.ctor1(0, -7.5, 0, 0);
 
   Future<ImageProvider> _pageRectToImage(
       mupdf.Page page, mupdf.Rect rect) async {
@@ -55,36 +56,33 @@ class ExerciseExtractor {
     return text;
   }
 
+  Future<Exercise> _updateExercise(
+      Exercise prev, mupdf.Page page, double y) async {
+    prev.bounds = mupdf.Rect.ctor1(0 + offset.x0, prev.bounds.y0 + offset.y0,
+        page.getBounds().x1 + offset.x1, y + offset.y1);
+    prev.image = await _pageRectToImage(page, prev.bounds);
+    return prev;
+  }
+
   Future<List<Exercise>> _extractExercises(mupdf.Document document) async {
     List<Exercise> exercises = [];
     for (int i = 0; i < document.countPages(i); i++) {
       mupdf.Page page = document.loadPage(i, i);
       List<mupdf.StructuredText_TextLine> lines = _getLinesOnPage(page);
       Exercise? prev;
-      mupdf.Rect? lastBounds;
-      for (final line in lines) {
+      for (mupdf.StructuredText_TextLine line in lines) {
         String text = _charsToText(line.chars);
         if (exerciseRegex.hasMatch(text)) {
-          print(
-              "$text: ${line.bbox.x0}, ${line.bbox.y0}, ${line.bbox.x1}, ${line.bbox.y1}");
-          if (prev == null) {
-            prev = Exercise(bounds: line.bbox);
-          } else {
-            prev.bounds = mupdf.Rect.ctor1(
-                0, prev.bounds.y0, page.getBounds().x1, line.bbox.y0);
-            prev.image = await _pageRectToImage(page, prev.bounds);
+          if (prev != null) {
+            prev = await _updateExercise(prev, page, line.bbox.y0);
             exercises.add(prev.copyWith());
-            prev = Exercise(bounds: line.bbox);
           }
+          prev = Exercise(bounds: line.bbox);
         }
-        lastBounds = line.bbox;
       }
-      Exercise? last = prev;
-      if (last != null && lastBounds != null) {
-        last.bounds = mupdf.Rect.ctor1(
-            0, last.bounds.y0, page.getBounds().x1, lastBounds.y1);
-        last.image = await _pageRectToImage(page, last.bounds);
-        exercises.add(last);
+      if (prev != null) {
+        prev = await _updateExercise(prev, page, lines.last.bbox.y1);
+        exercises.add(prev.copyWith());
       }
     }
     return exercises;
