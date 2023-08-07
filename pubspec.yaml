@@ -49,10 +49,10 @@ dependencies:
   _discoveryapis_commons: ^1.0.6
   path_provider: ^2.0.15
   image: ^4.0.17
-  syncfusion_flutter_pdf: ^22.2.5
-  pdf: ^3.10.4
-  pdf_image_renderer: ^0.7.0
   pdfx: ^2.4.0
+  jnigen: ^0.5.0
+  jni: ^0.5.0
+  file: ^7.0.0
 
 dev_dependencies:
   flutter_test:
