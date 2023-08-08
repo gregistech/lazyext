@@ -99,3 +99,4 @@ classes:
   - com.artifex.mupdf.fitz.TryLaterException
   - com.artifex.mupdf.fitz.android.AndroidDrawDevice
   - com.artifex.mupdf.fitz.android.AndroidImage
+  - com.artifex.mupdf.viewer.DocumentActivity

@@ -1,51 +1,52 @@
 import 'dart:io';
+import 'dart:math';
 
-import 'package:flutter/material.dart';
+import 'package:image/image.dart';
 import 'package:jni/jni.dart';
 import 'package:lazyext/src/third_party/com/artifex/mupdf/fitz/_package.dart'
     as mupdf;
 import 'package:path_provider/path_provider.dart';
 
 typedef ExerciseCollection = (String, List<Exercise>);
+typedef ExerciseBound = (int, double);
 
 class Exercise {
-  mupdf.Rect bounds;
-  ImageProvider? image;
+  ExerciseBound start;
+  ExerciseBound? end;
+  Image? image;
 
-  Exercise({required this.bounds, this.image});
+  Exercise({required this.start, this.end, this.image});
 
   Exercise copyWith() {
-    return Exercise(bounds: bounds, image: image);
+    return Exercise(start: start, end: end, image: image);
   }
 }
 
 class ExerciseExtractor {
   RegExp exerciseRegex = RegExp(r"^[1-9]\d*\.");
-  mupdf.Rect offset = mupdf.Rect.ctor1(0, -7.5, 0, 0);
+  double offsetStart = -10;
+  double offsetEnd = -5;
 
-  Future<ImageProvider> _pageRectToImage(
-      mupdf.Page page, mupdf.Rect rect) async {
+  Future<Image?> _pixmapToImage(mupdf.Pixmap pixmap) async {
+    String? path = (await getTemporaryDirectory()).path;
+    pixmap.saveAsPNG("$path/output.png".toJString());
+    return decodePngFile("$path/output.png");
+  }
+
+  Future<Image?> _pageRectToImage(mupdf.Page page, mupdf.Rect rect) async {
     mupdf.Pixmap pixmap =
         mupdf.Pixmap.ctor4(mupdf.ColorSpace.DeviceRGB, rect, true);
     mupdf.DrawDevice device = mupdf.DrawDevice.ctor2(pixmap);
     page.run(device, mupdf.Matrix.Identity(), mupdf.Cookie());
-    String path = (await getTemporaryDirectory()).path;
-    pixmap.saveAsPNG("$path/output.png".toJString());
-    return MemoryImage(await File("$path/output.png").readAsBytes());
+    return _pixmapToImage(pixmap);
   }
 
-  List<mupdf.StructuredText_TextLine> _getLinesOnPage(mupdf.Page page) {
-    List<mupdf.StructuredText_TextLine> lines = [];
-    mupdf.StructuredText text =
-        page.toStructuredText("preserve-whitespaces".toJString());
-    JArray<mupdf.StructuredText_TextBlock> blocks = text.getBlocks();
-    for (int j = 0; j < blocks.length; j++) {
-      mupdf.StructuredText_TextBlock block = blocks[j];
-      for (int i = 0; i < block.lines.length; i++) {
-        lines.add(block.lines[i]);
-      }
+  List<T> _JArrayToList<T extends JObject>(JList<T> list) {
+    List<T> elems = [];
+    for (int j = 0; j < list.length; j++) {
+      elems.add(list[j]);
     }
-    return lines;
+    return elems;
   }
 
   String _charsToText(JArray<mupdf.StructuredText_TextChar> chars) {
@@ -56,33 +57,120 @@ class ExerciseExtractor {
     return text;
   }
 
-  Future<Exercise> _updateExercise(
-      Exercise prev, mupdf.Page page, double y) async {
-    prev.bounds = mupdf.Rect.ctor1(0 + offset.x0, prev.bounds.y0 + offset.y0,
-        page.getBounds().x1 + offset.x1, y + offset.y1);
-    prev.image = await _pageRectToImage(page, prev.bounds);
+  mupdf.Rect _pageToRect(mupdf.Page page) {
+    return _boundsToRect(page, page.getBounds().y0, page.getBounds().y1);
+  }
+
+  mupdf.Rect _boundsToRect(mupdf.Page page, double start, double end) {
+    return mupdf.Rect.ctor1(0, start, page.getBounds().x1, end);
+  }
+
+  double _getPageTop(mupdf.Page page) {
+    return _getLinesOnPage(page).first.bbox.y0;
+  }
+
+  double _getPageBottom(mupdf.Page page) {
+    return _getLinesOnPage(page).last.chars[0].quad.lr_y;
+  }
+
+  List<(mupdf.Page, mupdf.Rect)> _exerciseToRects(
+      mupdf.Document document, Exercise exercise) {
+    final ExerciseBound start = exercise.start;
+    ExerciseBound? end = exercise.end;
+    List<(mupdf.Page, mupdf.Rect)> rects = [];
+    if (end != null) {
+      if (start.$1 == end.$1) {
+        mupdf.Page page = document.loadPage(start.$1, start.$1);
+        rects.add((
+          page,
+          _boundsToRect(page, start.$2 + offsetStart, end.$2 + offsetEnd)
+        ));
+      } else {
+        for (int i = start.$1; i <= end.$1; i++) {
+          mupdf.Page page = document.loadPage(i, i);
+          mupdf.Rect rect;
+          if (i == start.$1) {
+            rect = _boundsToRect(
+                page, start.$2 + offsetStart, _getPageBottom(page));
+          } else if (i == end.$1) {
+            rect = _boundsToRect(page, _getPageTop(page), end.$2 + offsetEnd);
+          } else {
+            rect = _pageToRect(page);
+          }
+          rects.add((page, rect));
+        }
+      }
+    }
+    return rects;
+  }
+
+  int _getBiggestImageWidth(List<Image> images) {
+    int biggest = 0;
+    for (Image image in images) {
+      biggest = max(biggest, image.width);
+    }
+    return biggest;
+  }
+
+  int _getBiggestImageHeight(List<Image> images) {
+    int biggest = 0;
+    for (Image image in images) {
+      biggest = max(biggest, image.height);
+    }
+    return biggest;
+  }
+
+  Image _stitchImages(List<Image> images) {
+    Image finalImage = Image(
+        width: _getBiggestImageWidth(images),
+        height: _getBiggestImageHeight(images));
+    int current = 0;
+    for (Image image in images) {
+      compositeImage(finalImage, image, dstY: current);
+      current += image.height;
+    }
+    return finalImage;
+  }
+
+  Future<Exercise> _finishExercise(
+      Exercise prev, mupdf.Document document, int pageIndex, double y) async {
+    prev.end = (pageIndex, y + offsetEnd);
+    List<Image> images = [];
+    for ((mupdf.Page, mupdf.Rect) rect in _exerciseToRects(document, prev)) {
+      Image? image = await _pageRectToImage(rect.$1, rect.$2);
+      if (image != null) {
+        images.add(image);
+      }
+    }
+    if (images.length == 1) {
+      prev.image = images.first;
+    } else if (images.length > 1) {
+      prev.image = _stitchImages(images);
+    }
     return prev;
   }
 
   Future<List<Exercise>> _extractExercises(mupdf.Document document) async {
     List<Exercise> exercises = [];
-    for (int i = 0; i < document.countPages(i); i++) {
+    Exercise? prev;
+    for (int i = 0; i < document.countPages(0); i++) {
       mupdf.Page page = document.loadPage(i, i);
       List<mupdf.StructuredText_TextLine> lines = _getLinesOnPage(page);
-      Exercise? prev;
       for (mupdf.StructuredText_TextLine line in lines) {
         String text = _charsToText(line.chars);
         if (exerciseRegex.hasMatch(text)) {
           if (prev != null) {
-            prev = await _updateExercise(prev, page, line.bbox.y0);
+            prev = await _finishExercise(prev, document, i, line.bbox.y0);
             exercises.add(prev.copyWith());
           }
-          prev = Exercise(bounds: line.bbox);
+          prev = Exercise(start: (i, line.bbox.y0));
         }
       }
       if (prev != null) {
-        prev = await _updateExercise(prev, page, lines.last.bbox.y1);
-        exercises.add(prev.copyWith());
+        if (i + 1 == document.countPages(0)) {
+          prev = await _finishExercise(prev, document, i, _getPageBottom(page));
+          exercises.add(prev.copyWith());
+        }
       }
     }
     return exercises;
