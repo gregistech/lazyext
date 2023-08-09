@@ -41,12 +41,22 @@ class ExerciseExtractor {
     return _pixmapToImage(pixmap);
   }
 
-  List<T> _JArrayToList<T extends JObject>(JList<T> list) {
+  List<T> _jArrayToList<T extends JObject>(JArray<T> list) {
     List<T> elems = [];
     for (int j = 0; j < list.length; j++) {
       elems.add(list[j]);
     }
     return elems;
+  }
+
+  List<mupdf.StructuredText_TextLine> _getLinesOnPage(mupdf.Page page) {
+    List<mupdf.StructuredText_TextBlock> blocks = _jArrayToList(
+        page.toStructuredText("preserve-whitespaces".toJString()).getBlocks());
+    List<mupdf.StructuredText_TextLine> lines = [];
+    for (mupdf.StructuredText_TextBlock block in blocks) {
+      lines.addAll(_jArrayToList(block.lines));
+    }
+    return lines;
   }
 
   String _charsToText(JArray<mupdf.StructuredText_TextChar> chars) {
@@ -69,8 +79,19 @@ class ExerciseExtractor {
     return _getLinesOnPage(page).first.bbox.y0;
   }
 
+  double _getLowestLine(List<mupdf.StructuredText_TextLine> lines) {
+    double lowest = 0;
+    for (mupdf.StructuredText_TextLine line in lines) {
+      if (lowest < line.bbox.y1) {
+        lowest = line.bbox.y1;
+      }
+    }
+    return lowest;
+  }
+
   double _getPageBottom(mupdf.Page page) {
-    return _getLinesOnPage(page).last.chars[0].quad.lr_y;
+    //return page.getBounds().y1;
+    //return _getLowestLine(_getLinesOnPage(page));
   }
 
   List<(mupdf.Page, mupdf.Rect)> _exerciseToRects(
@@ -81,19 +102,15 @@ class ExerciseExtractor {
     if (end != null) {
       if (start.$1 == end.$1) {
         mupdf.Page page = document.loadPage(start.$1, start.$1);
-        rects.add((
-          page,
-          _boundsToRect(page, start.$2 + offsetStart, end.$2 + offsetEnd)
-        ));
+        rects.add((page, _boundsToRect(page, start.$2, end.$2)));
       } else {
         for (int i = start.$1; i <= end.$1; i++) {
           mupdf.Page page = document.loadPage(i, i);
           mupdf.Rect rect;
           if (i == start.$1) {
-            rect = _boundsToRect(
-                page, start.$2 + offsetStart, _getPageBottom(page));
+            rect = _boundsToRect(page, start.$2, _getPageBottom(page));
           } else if (i == end.$1) {
-            rect = _boundsToRect(page, _getPageTop(page), end.$2 + offsetEnd);
+            rect = _boundsToRect(page, _getPageTop(page), end.$2);
           } else {
             rect = _pageToRect(page);
           }
@@ -132,9 +149,19 @@ class ExerciseExtractor {
     return finalImage;
   }
 
-  Future<Exercise> _finishExercise(
-      Exercise prev, mupdf.Document document, int pageIndex, double y) async {
-    prev.end = (pageIndex, y + offsetEnd);
+  Exercise _offsetExercise(Exercise exercise,
+      {bool first = false, bool last = false}) {
+    exercise.start =
+        (exercise.start.$1, exercise.start.$2 + (first ? 0 : offsetStart));
+    ExerciseBound? end = exercise.end;
+    if (end != null) {
+      exercise.end = (end.$1, end.$2 + (last ? 0 : offsetEnd));
+    }
+    return exercise;
+  }
+
+  Future<Exercise> _exerciseToImage(
+      Exercise prev, mupdf.Document document) async {
     List<Image> images = [];
     for ((mupdf.Page, mupdf.Rect) rect in _exerciseToRects(document, prev)) {
       Image? image = await _pageRectToImage(rect.$1, rect.$2);
@@ -156,19 +183,25 @@ class ExerciseExtractor {
     for (int i = 0; i < document.countPages(0); i++) {
       mupdf.Page page = document.loadPage(i, i);
       List<mupdf.StructuredText_TextLine> lines = _getLinesOnPage(page);
+      bool isFirst = true;
       for (mupdf.StructuredText_TextLine line in lines) {
         String text = _charsToText(line.chars);
         if (exerciseRegex.hasMatch(text)) {
           if (prev != null) {
-            prev = await _finishExercise(prev, document, i, line.bbox.y0);
+            prev.end = (i, line.bbox.y0);
+            prev = _offsetExercise(prev, first: isFirst);
+            isFirst = false;
+            prev = await _exerciseToImage(prev, document);
             exercises.add(prev.copyWith());
           }
           prev = Exercise(start: (i, line.bbox.y0));
         }
       }
       if (prev != null) {
+        prev.end = (i, _getPageBottom(page));
         if (i + 1 == document.countPages(0)) {
-          prev = await _finishExercise(prev, document, i, _getPageBottom(page));
+          prev = _offsetExercise(prev, last: true);
+          prev = await _exerciseToImage(prev, document);
           exercises.add(prev.copyWith());
         }
       }
