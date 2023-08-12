@@ -12,6 +12,7 @@
 // ignore_for_file: unused_element
 // ignore_for_file: unused_field
 // ignore_for_file: unused_import
+// ignore_for_file: unused_local_variable
 // ignore_for_file: unused_shown_name
 
 import "dart:isolate" show ReceivePort;
@@ -52,6 +53,94 @@ class DocumentWriter_OCRListener extends jni.JObject {
         _id_progress,
         jni.JniCallType.booleanType,
         [jni.JValueInt(i), jni.JValueInt(i1)]).boolean;
+  }
+
+  /// Maps a specific port to the implemented methods.
+  static final Map<int, Map<String, Function>> _$methods = {};
+
+  /// Maps a specific port to the type parameters.
+  static final Map<int, Map<String, jni.JObjType>> _$types = {};
+
+  ReceivePort? _$p;
+
+  static final Finalizer<ReceivePort> _$finalizer = Finalizer(($p) {
+    _$methods.remove($p.sendPort.nativePort);
+    _$types.remove($p.sendPort.nativePort);
+    $p.close();
+  });
+
+  @override
+  void delete() {
+    _$methods.remove(_$p?.sendPort.nativePort);
+    _$types.remove(_$p?.sendPort.nativePort);
+    _$p?.close();
+    _$finalizer.detach(this);
+    super.delete();
+  }
+
+  static jni.JObjectPtr _$invoke(
+    int port,
+    jni.JObjectPtr descriptor,
+    jni.JObjectPtr args,
+  ) {
+    return _$invokeMethod(
+      port,
+      $MethodInvocation.fromAddresses(
+        0,
+        descriptor.address,
+        args.address,
+      ),
+    );
+  }
+
+  static final ffi.Pointer<
+          ffi.NativeFunction<
+              jni.JObjectPtr Function(
+                  ffi.Uint64, jni.JObjectPtr, jni.JObjectPtr)>>
+      _$invokePointer = ffi.Pointer.fromFunction(_$invoke);
+
+  static ffi.Pointer<ffi.Void> _$invokeMethod(
+    int $p,
+    $MethodInvocation $i,
+  ) {
+    final $d = $i.methodDescriptor.toDartString(deleteOriginal: true);
+    final $a = $i.args;
+    if ($d == r"progress(II)Z") {
+      final $r = _$methods[$p]![$d]!(
+        $a[0]
+            .castTo(const jni.JIntegerType(), deleteOriginal: true)
+            .intValue(deleteOriginal: true),
+        $a[1]
+            .castTo(const jni.JIntegerType(), deleteOriginal: true)
+            .intValue(deleteOriginal: true),
+      );
+      return (jni.JBoolean($r)..setAsDeleted()).reference;
+    }
+    return jni.nullptr;
+  }
+
+  factory DocumentWriter_OCRListener.implement({
+    required bool Function(int i, int i1) progress,
+  }) {
+    final $p = ReceivePort();
+    final $x = DocumentWriter_OCRListener.fromRef(
+      ProtectedJniExtensions.newPortProxy(
+        r"com.artifex.mupdf.fitz.DocumentWriter$OCRListener",
+        $p,
+        _$invokePointer,
+      ),
+    ).._$p = $p;
+    final $a = $p.sendPort.nativePort;
+    _$types[$a] = {};
+    _$methods[$a] = {};
+    _$methods[$a]![r"progress(II)Z"] = progress;
+    _$finalizer.attach($x, $p, detach: $x);
+    $p.listen(($m) {
+      final $i = $MethodInvocation.fromMessage($m);
+      final $r = _$invokeMethod($p.sendPort.nativePort, $i);
+      ProtectedJniExtensions.returnResult($i.result, $r);
+    });
+    return $x;
   }
 }
 

@@ -12,6 +12,7 @@
 // ignore_for_file: unused_element
 // ignore_for_file: unused_field
 // ignore_for_file: unused_import
+// ignore_for_file: unused_local_variable
 // ignore_for_file: unused_shown_name
 
 import "dart:isolate" show ReceivePort;
@@ -56,6 +57,102 @@ class SeekableOutputStream extends jni.JObject {
   void truncate() {
     return jni.Jni.accessors.callMethodWithArgs(
         reference, _id_truncate, jni.JniCallType.voidType, []).check();
+  }
+
+  /// Maps a specific port to the implemented methods.
+  static final Map<int, Map<String, Function>> _$methods = {};
+
+  /// Maps a specific port to the type parameters.
+  static final Map<int, Map<String, jni.JObjType>> _$types = {};
+
+  ReceivePort? _$p;
+
+  static final Finalizer<ReceivePort> _$finalizer = Finalizer(($p) {
+    _$methods.remove($p.sendPort.nativePort);
+    _$types.remove($p.sendPort.nativePort);
+    $p.close();
+  });
+
+  @override
+  void delete() {
+    _$methods.remove(_$p?.sendPort.nativePort);
+    _$types.remove(_$p?.sendPort.nativePort);
+    _$p?.close();
+    _$finalizer.detach(this);
+    super.delete();
+  }
+
+  static jni.JObjectPtr _$invoke(
+    int port,
+    jni.JObjectPtr descriptor,
+    jni.JObjectPtr args,
+  ) {
+    return _$invokeMethod(
+      port,
+      $MethodInvocation.fromAddresses(
+        0,
+        descriptor.address,
+        args.address,
+      ),
+    );
+  }
+
+  static final ffi.Pointer<
+          ffi.NativeFunction<
+              jni.JObjectPtr Function(
+                  ffi.Uint64, jni.JObjectPtr, jni.JObjectPtr)>>
+      _$invokePointer = ffi.Pointer.fromFunction(_$invoke);
+
+  static ffi.Pointer<ffi.Void> _$invokeMethod(
+    int $p,
+    $MethodInvocation $i,
+  ) {
+    final $d = $i.methodDescriptor.toDartString(deleteOriginal: true);
+    final $a = $i.args;
+    if ($d == r"write([BII)V") {
+      _$methods[$p]![$d]!(
+        $a[0].castTo(const jni.JArrayType(jni.JByteType()),
+            deleteOriginal: true),
+        $a[1]
+            .castTo(const jni.JIntegerType(), deleteOriginal: true)
+            .intValue(deleteOriginal: true),
+        $a[2]
+            .castTo(const jni.JIntegerType(), deleteOriginal: true)
+            .intValue(deleteOriginal: true),
+      );
+      return jni.nullptr;
+    }
+    if ($d == r"truncate()V") {
+      _$methods[$p]![$d]!();
+      return jni.nullptr;
+    }
+    return jni.nullptr;
+  }
+
+  factory SeekableOutputStream.implement({
+    required void Function(jni.JArray<jni.jbyte> bs, int i, int i1) write,
+    required void Function() truncate,
+  }) {
+    final $p = ReceivePort();
+    final $x = SeekableOutputStream.fromRef(
+      ProtectedJniExtensions.newPortProxy(
+        r"com.artifex.mupdf.fitz.SeekableOutputStream",
+        $p,
+        _$invokePointer,
+      ),
+    ).._$p = $p;
+    final $a = $p.sendPort.nativePort;
+    _$types[$a] = {};
+    _$methods[$a] = {};
+    _$methods[$a]![r"write([BII)V"] = write;
+    _$methods[$a]![r"truncate()V"] = truncate;
+    _$finalizer.attach($x, $p, detach: $x);
+    $p.listen(($m) {
+      final $i = $MethodInvocation.fromMessage($m);
+      final $r = _$invokeMethod($p.sendPort.nativePort, $i);
+      ProtectedJniExtensions.returnResult($i.result, $r);
+    });
+    return $x;
   }
 }
 

@@ -50,8 +50,16 @@ dependencies:
   path_provider: ^2.0.15
   image: ^4.0.17
   pdfx: ^2.4.0
-  jnigen: ^0.5.0
-  jni: ^0.5.0
+  jnigen:
+    git:
+      url: https://github.com/dart-lang/jnigen
+      ref: main
+      path: jnigen
+  jni:
+    git:
+      url: https://github.com/dart-lang/jnigen
+      ref: main
+      path: jni
   file: ^7.0.0
 
 dev_dependencies:

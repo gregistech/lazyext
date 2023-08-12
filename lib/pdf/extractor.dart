@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:image/image.dart';
 import 'package:jni/jni.dart';
+import 'package:lazyext/pdf/bbox_device.dart';
 import 'package:lazyext/src/third_party/com/artifex/mupdf/fitz/_package.dart'
     as mupdf;
 import 'package:path_provider/path_provider.dart';
@@ -50,8 +51,11 @@ class ExerciseExtractor {
   }
 
   List<mupdf.StructuredText_TextLine> _getLinesOnPage(mupdf.Page page) {
-    List<mupdf.StructuredText_TextBlock> blocks = _jArrayToList(
-        page.toStructuredText("preserve-whitespaces".toJString()).getBlocks());
+    List<mupdf.StructuredText_TextBlock> blocks = _jArrayToList(page
+        .toStructuredText(
+            "preserve-ligatures,preserve-whitespace,preserve-spans,preserve-images"
+                .toJString())
+        .getBlocks());
     List<mupdf.StructuredText_TextLine> lines = [];
     for (mupdf.StructuredText_TextBlock block in blocks) {
       lines.addAll(_jArrayToList(block.lines));
@@ -79,33 +83,28 @@ class ExerciseExtractor {
     return _getLinesOnPage(page).first.bbox.y0;
   }
 
-  double _getLowestLine(List<mupdf.StructuredText_TextLine> lines) {
-    double lowest = 0;
-    for (mupdf.StructuredText_TextLine line in lines) {
-      if (lowest < line.bbox.y1) {
-        lowest = line.bbox.y1;
-      }
-    }
-    return lowest;
+  double _getPageBottom(mupdf.PDFPage page) {
+    BBoxDevice device = BBoxDevice();
+    page.run(device.getDevice(), mupdf.Matrix.Identity(), mupdf.Cookie());
+    //return device.getBounds().y1;
+    return page.getBounds().y1;
+    //return _getLinesOnPage(page).last.bbox.y1;
   }
 
-  double _getPageBottom(mupdf.Page page) {
-    //return page.getBounds().y1;
-    //return _getLowestLine(_getLinesOnPage(page));
-  }
-
-  List<(mupdf.Page, mupdf.Rect)> _exerciseToRects(
+  List<(mupdf.PDFPage, mupdf.Rect)> _exerciseToRects(
       mupdf.Document document, Exercise exercise) {
     final ExerciseBound start = exercise.start;
     ExerciseBound? end = exercise.end;
-    List<(mupdf.Page, mupdf.Rect)> rects = [];
+    List<(mupdf.PDFPage, mupdf.Rect)> rects = [];
     if (end != null) {
       if (start.$1 == end.$1) {
-        mupdf.Page page = document.loadPage(start.$1, start.$1);
+        mupdf.PDFPage page =
+            document.loadPage(start.$1, start.$1).castTo(mupdf.PDFPage.type);
         rects.add((page, _boundsToRect(page, start.$2, end.$2)));
       } else {
         for (int i = start.$1; i <= end.$1; i++) {
-          mupdf.Page page = document.loadPage(i, i);
+          mupdf.PDFPage page =
+              document.loadPage(i, i).castTo(mupdf.PDFPage.type);
           mupdf.Rect rect;
           if (i == start.$1) {
             rect = _boundsToRect(page, start.$2, _getPageBottom(page));
@@ -177,11 +176,11 @@ class ExerciseExtractor {
     return prev;
   }
 
-  Future<List<Exercise>> _extractExercises(mupdf.Document document) async {
+  Future<List<Exercise>> _extractExercises(mupdf.PDFDocument document) async {
     List<Exercise> exercises = [];
     Exercise? prev;
     for (int i = 0; i < document.countPages(0); i++) {
-      mupdf.Page page = document.loadPage(i, i);
+      mupdf.PDFPage page = document.loadPage(i, i).castTo(mupdf.PDFPage.type);
       List<mupdf.StructuredText_TextLine> lines = _getLinesOnPage(page);
       bool isFirst = true;
       for (mupdf.StructuredText_TextLine line in lines) {
@@ -215,11 +214,15 @@ class ExerciseExtractor {
         .toDartString(deleteOriginal: true);
   }
 
-  Future<ExerciseCollection> getExerciseCollection(File file) async {
+  Future<ExerciseCollection?> getExerciseCollection(File file) async {
     mupdf.Document document =
         mupdf.Document.openDocument(file.path.toJString());
-    String title = _getDocumentTitle(document) ?? "PLACEHOLDER";
-    List<Exercise> exercises = await _extractExercises(document);
-    return (title, exercises);
+    if (document.isPDF()) {
+      mupdf.PDFDocument pdf = document.castTo(mupdf.PDFDocument.type);
+      String title = _getDocumentTitle(pdf) ?? "PLACEHOLDER";
+      List<Exercise> exercises = await _extractExercises(pdf);
+      return (title, exercises);
+    }
+    return null;
   }
 }

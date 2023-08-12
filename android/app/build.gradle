@@ -25,7 +25,6 @@ apply plugin: 'com.android.application'
 // START: FlutterFire Configuration
 apply plugin: 'com.google.gms.google-services'
 // END: FlutterFire Configuration
-apply plugin: 'kotlin-android'
 apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
 
 android {
@@ -38,13 +37,8 @@ android {
         targetCompatibility JavaVersion.VERSION_1_8
     }
 
-    kotlinOptions {
-        jvmTarget = '1.8'
-    }
-
     sourceSets {
-        main.java.srcDirs += 'src/main/kotlin'
-      //main.jniLibs.srcDirs += "${project.projectDir.path}/../../native-libraries"
+        main.java.srcDirs += 'src/main/java'
     }
 
     defaultConfig {
@@ -72,7 +66,6 @@ flutter {
 }
 
 dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
     api 'com.artifex.mupdf:fitz:1.22.0'
     api 'com.artifex.mupdf:viewer:1.22.0a'
 }

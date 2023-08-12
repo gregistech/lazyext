@@ -110,7 +110,7 @@ class CompareView extends StatelessWidget {
       FutureBuilder(
         future: _extractor.getExerciseCollection(File(path)),
         builder: (BuildContext context,
-            AsyncSnapshot<(String, List<Exercise>)> snapshot) {
+            AsyncSnapshot<(String, List<Exercise>)?> snapshot) {
           (String, List<Exercise>)? data = snapshot.data;
           if (data != null) {
             return ExercisesView(exercises: data.$2);

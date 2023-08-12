@@ -24,15 +24,10 @@ classes:
   - com.artifex.mupdf.fitz.BufferInputStream
   - com.artifex.mupdf.fitz.BufferOutputStream
   - com.artifex.mupdf.fitz.BuildConfig
-  - com.artifex.mupdf.fitz.ColorParams$1
-  - com.artifex.mupdf.fitz.ColorParams$RenderingIntent
   - com.artifex.mupdf.fitz.ColorParams
   - com.artifex.mupdf.fitz.ColorSpace
-  - com.artifex.mupdf.fitz.Context$Log
-  - com.artifex.mupdf.fitz.Context$Version
   - com.artifex.mupdf.fitz.Context
   - com.artifex.mupdf.fitz.Cookie
-  - com.artifex.mupdf.fitz.DOM$DOMAttribute
   - com.artifex.mupdf.fitz.DOM
   - com.artifex.mupdf.fitz.DefaultAppearance
   - com.artifex.mupdf.fitz.DefaultColorSpaces
@@ -40,7 +35,6 @@ classes:
   - com.artifex.mupdf.fitz.DisplayList
   - com.artifex.mupdf.fitz.DisplayListDevice
   - com.artifex.mupdf.fitz.Document
-  - com.artifex.mupdf.fitz.DocumentWriter$OCRListener
   - com.artifex.mupdf.fitz.DocumentWriter
   - com.artifex.mupdf.fitz.DrawDevice
   - com.artifex.mupdf.fitz.FileStream
@@ -54,20 +48,12 @@ classes:
   - com.artifex.mupdf.fitz.MultiArchive
   - com.artifex.mupdf.fitz.NativeDevice
   - com.artifex.mupdf.fitz.Outline
-  - com.artifex.mupdf.fitz.OutlineIterator$OutlineItem
   - com.artifex.mupdf.fitz.OutlineIterator
   - com.artifex.mupdf.fitz.PDFAnnotation
-  - com.artifex.mupdf.fitz.PDFDocument$JsEventListener$AlertResult
-  - com.artifex.mupdf.fitz.PDFDocument$JsEventListener
-  - com.artifex.mupdf.fitz.PDFDocument$PDFEmbeddedFileParams
   - com.artifex.mupdf.fitz.PDFDocument
   - com.artifex.mupdf.fitz.PDFGraftMap
-  - com.artifex.mupdf.fitz.PDFObject$PDFObjectIterator
   - com.artifex.mupdf.fitz.PDFObject
   - com.artifex.mupdf.fitz.PDFPage
-  - com.artifex.mupdf.fitz.PDFWidget$TextWidgetCharLayout
-  - com.artifex.mupdf.fitz.PDFWidget$TextWidgetLayout
-  - com.artifex.mupdf.fitz.PDFWidget$TextWidgetLineLayout
   - com.artifex.mupdf.fitz.PDFWidget
   - com.artifex.mupdf.fitz.PKCS7DistinguishedName
   - com.artifex.mupdf.fitz.PKCS7Signer
@@ -87,10 +73,6 @@ classes:
   - com.artifex.mupdf.fitz.Shade
   - com.artifex.mupdf.fitz.Story
   - com.artifex.mupdf.fitz.StrokeState
-  - com.artifex.mupdf.fitz.StructuredText$BlockWalker
-  - com.artifex.mupdf.fitz.StructuredText$TextBlock
-  - com.artifex.mupdf.fitz.StructuredText$TextChar
-  - com.artifex.mupdf.fitz.StructuredText$TextLine
   - com.artifex.mupdf.fitz.StructuredText
   - com.artifex.mupdf.fitz.StructuredTextWalker
   - com.artifex.mupdf.fitz.Text
@@ -100,3 +82,8 @@ classes:
   - com.artifex.mupdf.fitz.android.AndroidDrawDevice
   - com.artifex.mupdf.fitz.android.AndroidImage
   - com.artifex.mupdf.viewer.DocumentActivity
+  - com.gergovari.mupdf.DeviceInterface
+  - com.gergovari.mupdf.ExtendedDevice
+
+enable_experiment:
+  - interface_implementation
