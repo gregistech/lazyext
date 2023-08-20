@@ -26,8 +26,10 @@ class OriginalView extends StatelessWidget {
 }
 
 class ExercisesView extends StatelessWidget {
+  final String title;
   final List<Exercise> exercises;
-  const ExercisesView({super.key, required this.exercises});
+  const ExercisesView(
+      {super.key, required this.title, required this.exercises});
 
   Future<ImageProvider?> _imageToImageProvider(img.Image image) async {
     if (image.format != img.Format.uint8 || image.numChannels != 4) {
@@ -66,33 +68,39 @@ class ExercisesView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-        child: ListView.separated(
-      itemCount: exercises.length,
-      itemBuilder: (BuildContext context, int index) {
-        img.Image? image = exercises[index].image;
-        if (image != null) {
-          return FutureBuilder<ImageProvider?>(
-              future: _imageToImageProvider(image),
-              builder: (BuildContext context,
-                  AsyncSnapshot<ImageProvider?> snapshot) {
-                ImageProvider? image = snapshot.data;
-                if (image != null) {
-                  return Image(image: image);
-                } else {
-                  return const Placeholder();
-                }
-              });
-        } else {
-          return const Placeholder();
-        }
-      },
-      separatorBuilder: (BuildContext context, int index) {
-        return const Divider(
-          height: 1,
-        );
-      },
-    ));
+    return Column(
+      children: [
+        Text(title),
+        Expanded(
+          child: ListView.separated(
+            itemCount: exercises.length,
+            itemBuilder: (BuildContext context, int index) {
+              img.Image? image = exercises[index].image;
+              if (image != null) {
+                return FutureBuilder<ImageProvider?>(
+                    future: _imageToImageProvider(image),
+                    builder: (BuildContext context,
+                        AsyncSnapshot<ImageProvider?> snapshot) {
+                      ImageProvider? image = snapshot.data;
+                      if (image != null) {
+                        return Image(image: image);
+                      } else {
+                        return const Placeholder();
+                      }
+                    });
+              } else {
+                return const Placeholder();
+              }
+            },
+            separatorBuilder: (BuildContext context, int index) {
+              return const Divider(
+                height: 1,
+              );
+            },
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -113,9 +121,7 @@ class CompareView extends StatelessWidget {
             AsyncSnapshot<(String, List<Exercise>)?> snapshot) {
           (String, List<Exercise>)? data = snapshot.data;
           if (data != null) {
-            return ColoredBox(
-                color: const Color.fromARGB(1, 0, 0, 0),
-                child: ExercisesView(exercises: data.$2));
+            return ExercisesView(title: data.$1, exercises: data.$2);
           } else {
             return const Placeholder();
           }

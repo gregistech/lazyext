@@ -22,6 +22,7 @@ class Exercise {
 }
 
 class ExerciseExtractor {
+  RegExp titleRegex = RegExp(r"^.*\d{2}\.\d{2}\..*$");
   RegExp exerciseRegex = RegExp(r"^[1-9]\d*\.");
   double offsetStart = -10;
   double offsetEnd = -5;
@@ -202,17 +203,20 @@ class ExerciseExtractor {
     return exercises;
   }
 
-  String? _getDocumentTitle(mupdf.Document document) {
-    return document
-        .getMetaData("info:Title".toJString())
-        .toDartString(deleteOriginal: true);
+  String _getDocumentTitle(mupdf.Document document) {
+    String? title;
+    RegExpMatch? match = titleRegex.firstMatch(document.pages.first
+        .text); // FIXME: will never match, mupdf returns lines in a bad way...
+    if (match != null) {
+      title = match[0];
+    }
+    return title ?? document.getMetadata("info:Title");
   }
 
   Future<ExerciseCollection> getExerciseCollection(File file) async {
     mupdf.Document document =
         mupdf.Document.openDocument(file.path.toJString());
-    String title = _getDocumentTitle(document) ?? "PLACEHOLDER";
     List<Exercise> exercises = await _extractExercises(document);
-    return (title, exercises);
+    return (_getDocumentTitle(document), exercises);
   }
 }
