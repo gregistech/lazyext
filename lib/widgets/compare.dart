@@ -25,11 +25,29 @@ class OriginalView extends StatelessWidget {
   }
 }
 
-class ExercisesView extends StatelessWidget {
-  final String title;
+class ExerciseListView extends StatefulWidget {
   final List<Exercise> exercises;
-  const ExercisesView(
-      {super.key, required this.title, required this.exercises});
+  const ExerciseListView({super.key, required this.exercises});
+
+  @override
+  State<ExerciseListView> createState() => _ExerciseListViewState();
+}
+
+class _ExerciseListViewState extends State<ExerciseListView> {
+  Future<List<ImageProvider>> _exercisesToImageProviders(
+      List<Exercise> exercises) async {
+    List<ImageProvider> images = [];
+    for (Exercise exercise in exercises) {
+      img.Image? image = exercise.image;
+      if (image != null) {
+        ImageProvider? provider = await _imageToImageProvider(image);
+        if (provider != null) {
+          images.add(provider);
+        }
+      }
+    }
+    return images;
+  }
 
   Future<ImageProvider?> _imageToImageProvider(img.Image image) async {
     if (image.format != img.Format.uint8 || image.numChannels != 4) {
@@ -66,39 +84,56 @@ class ExercisesView extends StatelessWidget {
     }
   }
 
+  int imageCount = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder(
+      future: _exercisesToImageProviders(widget.exercises),
+      builder:
+          (BuildContext context, AsyncSnapshot<List<ImageProvider>> snapshot) {
+        List<ImageProvider>? images = snapshot.data;
+        return ListView.separated(
+          itemCount: widget.exercises.length,
+          itemBuilder: (BuildContext context, int index) {
+            if (images != null) {
+              return Image(image: images[index]);
+            } else {
+              return const Placeholder();
+            }
+          },
+          separatorBuilder: (BuildContext context, int index) {
+            return const Divider(
+              height: 1,
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class ExercisesView extends StatefulWidget {
+  final String title;
+  final List<Exercise> exercises;
+  const ExercisesView(
+      {super.key, required this.title, required this.exercises});
+
+  @override
+  State<ExercisesView> createState() => _ExercisesViewState();
+}
+
+class _ExercisesViewState extends State<ExercisesView> {
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(title),
-        Expanded(
-          child: ListView.separated(
-            itemCount: exercises.length,
-            itemBuilder: (BuildContext context, int index) {
-              img.Image? image = exercises[index].image;
-              if (image != null) {
-                return FutureBuilder<ImageProvider?>(
-                    future: _imageToImageProvider(image),
-                    builder: (BuildContext context,
-                        AsyncSnapshot<ImageProvider?> snapshot) {
-                      ImageProvider? image = snapshot.data;
-                      if (image != null) {
-                        return Image(image: image);
-                      } else {
-                        return const Placeholder();
-                      }
-                    });
-              } else {
-                return const Placeholder();
-              }
-            },
-            separatorBuilder: (BuildContext context, int index) {
-              return const Divider(
-                height: 1,
-              );
-            },
-          ),
+        Text(widget.title),
+        TextButton(
+          onPressed: () {},
+          child: const Text("Merge"),
         ),
+        Flexible(child: ExerciseListView(exercises: widget.exercises)),
       ],
     );
   }
