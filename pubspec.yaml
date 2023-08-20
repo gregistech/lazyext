@@ -60,6 +60,8 @@ dependencies:
       url: https://github.com/dart-lang/jnigen
       ref: main
       path: jni
+  mupdf_android:
+    path: ../mupdf_android
   file: ^7.0.0
 
 dev_dependencies:

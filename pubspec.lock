@@ -418,6 +418,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.9.1"
+  mupdf_android:
+    dependency: "direct main"
+    description:
+      path: "../mupdf_android"
+      relative: true
+    source: path
+    version: "0.0.1"
   nested:
     dependency: transitive
     description:

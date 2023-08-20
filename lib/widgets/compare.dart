@@ -113,7 +113,9 @@ class CompareView extends StatelessWidget {
             AsyncSnapshot<(String, List<Exercise>)?> snapshot) {
           (String, List<Exercise>)? data = snapshot.data;
           if (data != null) {
-            return ExercisesView(exercises: data.$2);
+            return ColoredBox(
+                color: const Color.fromARGB(1, 0, 0, 0),
+                child: ExercisesView(exercises: data.$2));
           } else {
             return const Placeholder();
           }

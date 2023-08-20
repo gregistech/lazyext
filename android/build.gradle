@@ -18,8 +18,11 @@ allprojects {
     repositories {
         google()
         mavenCentral()
-	maven { url "https://maven.ghostscript.com/" }
-    }
+        flatDir {
+            dirs "../../../mupdf_android/mvn_jar"
+        }
+
+    }    
 }
 
 rootProject.buildDir = '../build'

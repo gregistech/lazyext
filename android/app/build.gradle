@@ -64,8 +64,3 @@ android {
 flutter {
     source '../..'
 }
-
-dependencies {
-    api 'com.artifex.mupdf:fitz:1.22.0'
-    api 'com.artifex.mupdf:viewer:1.22.0a'
-}

@@ -3,9 +3,7 @@ import 'dart:math';
 
 import 'package:image/image.dart';
 import 'package:jni/jni.dart';
-import 'package:lazyext/pdf/bbox_device.dart';
-import 'package:lazyext/src/third_party/com/artifex/mupdf/fitz/_package.dart'
-    as mupdf;
+import 'package:mupdf_android/mupdf_android.dart' as mupdf;
 import 'package:path_provider/path_provider.dart';
 
 typedef ExerciseCollection = (String, List<Exercise>);
@@ -83,12 +81,8 @@ class ExerciseExtractor {
     return _getLinesOnPage(page).first.bbox.y0;
   }
 
-  double _getPageBottom(mupdf.PDFPage page) {
-    BBoxDevice device = BBoxDevice();
-    page.run(device.getDevice(), mupdf.Matrix.Identity(), mupdf.Cookie());
-    //return device.getBounds().y1;
-    return page.getBounds().y1;
-    //return _getLinesOnPage(page).last.bbox.y1;
+  double _getPageBottom(mupdf.Page page) {
+    return mupdf.BBoxFinder().getBounds(page).y1;
   }
 
   List<(mupdf.PDFPage, mupdf.Rect)> _exerciseToRects(
@@ -176,7 +170,7 @@ class ExerciseExtractor {
     return prev;
   }
 
-  Future<List<Exercise>> _extractExercises(mupdf.PDFDocument document) async {
+  Future<List<Exercise>> _extractExercises(mupdf.Document document) async {
     List<Exercise> exercises = [];
     Exercise? prev;
     for (int i = 0; i < document.countPages(0); i++) {
@@ -214,15 +208,11 @@ class ExerciseExtractor {
         .toDartString(deleteOriginal: true);
   }
 
-  Future<ExerciseCollection?> getExerciseCollection(File file) async {
+  Future<ExerciseCollection> getExerciseCollection(File file) async {
     mupdf.Document document =
         mupdf.Document.openDocument(file.path.toJString());
-    if (document.isPDF()) {
-      mupdf.PDFDocument pdf = document.castTo(mupdf.PDFDocument.type);
-      String title = _getDocumentTitle(pdf) ?? "PLACEHOLDER";
-      List<Exercise> exercises = await _extractExercises(pdf);
-      return (title, exercises);
-    }
-    return null;
+    String title = _getDocumentTitle(document) ?? "PLACEHOLDER";
+    List<Exercise> exercises = await _extractExercises(document);
+    return (title, exercises);
   }
 }
