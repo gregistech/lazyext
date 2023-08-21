@@ -4,7 +4,6 @@ import 'dart:ui' as ui;
 import 'packagE:image/image.dart' as img;
 
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:jni/jni.dart';
 import 'package:lazyext/pdf/merger.dart';
 import 'package:mupdf_android/mupdf_android.dart' as mupdf;
@@ -27,6 +26,46 @@ class OriginalView extends StatelessWidget {
         controller: _controller,
       )),
     ]);
+  }
+}
+
+class MergedView extends StatelessWidget {
+  final List<Exercise> exercises;
+  const MergedView({super.key, required this.exercises});
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder(
+        future: PracticeMerger().exercisesToPDFDocument(exercises),
+        builder:
+            (BuildContext context, AsyncSnapshot<mupdf.PDFDocument> snapshot) {
+          mupdf.PDFDocument? document = snapshot.data;
+          if (document != null) {
+            return FutureBuilder(
+              future: getTemporaryDirectory(),
+              builder:
+                  (BuildContext context, AsyncSnapshot<Directory> snapshot) {
+                Directory? dir = snapshot.data;
+                if (dir != null) {
+                  File file = File("${dir.path}/current.pdf");
+                  document.save(file.path.toJString(), file.path.toJString());
+                  PdfController controller =
+                      PdfController(document: PdfDocument.openFile(file.path));
+                  return Column(children: [
+                    Expanded(
+                        child: PdfView(
+                      controller: controller,
+                    )),
+                  ]);
+                } else {
+                  return const Placeholder();
+                }
+              },
+            );
+          } else {
+            return const Placeholder();
+          }
+        });
   }
 }
 
@@ -134,20 +173,6 @@ class _ExercisesViewState extends State<ExercisesView> {
     return Column(
       children: [
         Text(widget.title),
-        TextButton(
-          onPressed: () async {
-            Merger merger = PracticeMerger();
-            mupdf.PDFDocument pdf =
-                await merger.exercisesToPDFDocument(widget.exercises);
-            String path = "${(await getTemporaryDirectory()).path}/merged.pdf";
-            File file = File.fromUri(Uri.file(path));
-            pdf.save(file.path.toJString(), file.path.toJString());
-            // ignore: use_build_context_synchronously
-            if (!context.mounted) return;
-            context.go("/compare", extra: file.path);
-          },
-          child: const Text("Merge"),
-        ),
         Flexible(child: ExerciseListView(exercises: widget.exercises)),
       ],
     );
@@ -161,12 +186,14 @@ class CompareView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    Future<(String, List<Exercise>)> exercises =
+        _extractor.getExerciseCollection(File(path));
     return TabBarView(children: [
       OriginalView(
         path: path,
       ),
       FutureBuilder(
-        future: _extractor.getExerciseCollection(File(path)),
+        future: exercises,
         builder: (BuildContext context,
             AsyncSnapshot<(String, List<Exercise>)?> snapshot) {
           (String, List<Exercise>)? data = snapshot.data;
@@ -176,7 +203,18 @@ class CompareView extends StatelessWidget {
             return const Placeholder();
           }
         },
-      )
+      ),
+      FutureBuilder(
+          future: exercises,
+          builder: (BuildContext context,
+              AsyncSnapshot<(String, List<Exercise>)?> snapshot) {
+            (String, List<Exercise>)? data = snapshot.data;
+            if (data != null) {
+              return MergedView(exercises: data.$2);
+            } else {
+              return const Placeholder();
+            }
+          })
     ]);
   }
 }

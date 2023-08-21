@@ -8,12 +8,17 @@ class CompareScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const List<Tab> tabs = [
+      Tab(icon: Text("Original")),
+      Tab(icon: Text("Exercises")),
+      Tab(icon: Text("Merged"))
+    ];
     return DefaultTabController(
-      length: 2,
+      length: tabs.length,
       child: ScreenWidget(
         title: "Compare",
         bottom: const TabBar(
-          tabs: [Tab(icon: Text("Original")), Tab(icon: Text("Exercises"))],
+          tabs: tabs,
         ),
         child: CompareView(path: path),
       ),
