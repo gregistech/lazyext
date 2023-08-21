@@ -63,6 +63,7 @@ dependencies:
   mupdf_android:
     path: ../mupdf_android
   file: ^7.0.0
+  file_picker: ^5.3.3
 
 dev_dependencies:
   flutter_test:
