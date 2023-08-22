@@ -1,5 +1,11 @@
 buildscript {
     ext.kotlin_version = '1.7.10'
+
+    ext {
+       compileSdkVersion   = 31                // or latest
+       targetSdkVersion    = 31                // or latest
+       appCompatVersion    = "1.4.2"           // or latest
+    }
     repositories {
         google()
         mavenCentral()
@@ -21,7 +27,9 @@ allprojects {
         flatDir {
             dirs "../../../mupdf_android/mvn_jar"
         }
-
+        maven {
+            url "${project(':background_fetch').projectDir}/libs"
+        }
     }    
 }
 

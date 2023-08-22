@@ -1,8 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
-import 'package:file_picker/file_picker.dart';
-import 'package:lazyext/preferences.dart';
+import 'package:lazyext/android_file_storage.dart';
 
 import '../pdf/storage.dart';
 import 'packagE:image/image.dart' as img;
@@ -49,19 +48,7 @@ class _MergedViewState extends State<MergedView>
 
   @override
   void initState() {
-    Preferences prefs = Preferences();
-    prefs.storageRoot.then((String? value) {
-      if (value == null) {
-        FilePicker.platform.getDirectoryPath().then((String? root) {
-          if (root != null) {
-            prefs.storageRoot = Future.value(root);
-            storage = FileStorage(root);
-          }
-        });
-      } else {
-        storage = FileStorage(value);
-      }
-    });
+    AndroidFileStorage().storage?.then((Storage? value) => storage = value);
     document = PracticeMerger().exercisesToPDFDocument(widget.exercises);
     dir = getTemporaryDirectory();
     super.initState();
