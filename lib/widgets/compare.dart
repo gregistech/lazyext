@@ -1,6 +1,9 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
+import 'package:file_picker/file_picker.dart';
+
+import '../pdf/storage.dart';
 import 'packagE:image/image.dart' as img;
 
 import 'package:flutter/material.dart';
@@ -29,20 +32,43 @@ class OriginalView extends StatelessWidget {
   }
 }
 
-class MergedView extends StatelessWidget {
+class MergedView extends StatefulWidget {
   final List<Exercise> exercises;
   const MergedView({super.key, required this.exercises});
 
   @override
+  State<MergedView> createState() => _MergedViewState();
+}
+
+class _MergedViewState extends State<MergedView>
+    with AutomaticKeepAliveClientMixin<MergedView> {
+  static Storage? storage;
+  static Future<mupdf.PDFDocument>? document;
+  static Future<Directory>? dir;
+
+  @override
+  void initState() {
+    FilePicker.platform.getDirectoryPath().then((String? root) {
+      if (root != null) {
+        storage = FileStorage(root);
+      }
+    });
+    document = PracticeMerger().exercisesToPDFDocument(widget.exercises);
+    dir = getTemporaryDirectory();
+    super.initState();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    super.build(context);
     return FutureBuilder(
-        future: PracticeMerger().exercisesToPDFDocument(exercises),
+        future: document,
         builder:
             (BuildContext context, AsyncSnapshot<mupdf.PDFDocument> snapshot) {
           mupdf.PDFDocument? document = snapshot.data;
           if (document != null) {
             return FutureBuilder(
-              future: getTemporaryDirectory(),
+              future: dir,
               builder:
                   (BuildContext context, AsyncSnapshot<Directory> snapshot) {
                 Directory? dir = snapshot.data;
@@ -52,6 +78,11 @@ class MergedView extends StatelessWidget {
                   PdfController controller =
                       PdfController(document: PdfDocument.openFile(file.path));
                   return Column(children: [
+                    TextButton(
+                        onPressed: () {
+                          storage?.savePDF([], document);
+                        },
+                        child: const Text("Save")),
                     Expanded(
                         child: PdfView(
                       controller: controller,
@@ -67,6 +98,9 @@ class MergedView extends StatelessWidget {
           }
         });
   }
+
+  @override
+  bool get wantKeepAlive => true;
 }
 
 class ExerciseListView extends StatefulWidget {
@@ -77,7 +111,8 @@ class ExerciseListView extends StatefulWidget {
   State<ExerciseListView> createState() => _ExerciseListViewState();
 }
 
-class _ExerciseListViewState extends State<ExerciseListView> {
+class _ExerciseListViewState extends State<ExerciseListView>
+    with AutomaticKeepAliveClientMixin<ExerciseListView> {
   Future<List<ImageProvider>> _exercisesToImageProviders(
       List<Exercise> exercises) async {
     List<ImageProvider> images = [];
@@ -91,6 +126,13 @@ class _ExerciseListViewState extends State<ExerciseListView> {
       }
     }
     return images;
+  }
+
+  Future<List<ImageProvider>>? _imageProviders;
+  @override
+  void initState() {
+    super.initState();
+    _imageProviders = _exercisesToImageProviders(widget.exercises);
   }
 
   Future<ImageProvider?> _imageToImageProvider(img.Image image) async {
@@ -132,8 +174,9 @@ class _ExerciseListViewState extends State<ExerciseListView> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return FutureBuilder(
-      future: _exercisesToImageProviders(widget.exercises),
+      future: _imageProviders,
       builder:
           (BuildContext context, AsyncSnapshot<List<ImageProvider>> snapshot) {
         List<ImageProvider>? images = snapshot.data;
@@ -155,6 +198,9 @@ class _ExerciseListViewState extends State<ExerciseListView> {
       },
     );
   }
+
+  @override
+  bool get wantKeepAlive => true;
 }
 
 class ExercisesView extends StatefulWidget {
