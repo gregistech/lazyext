@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:googleapis/classroom/v1.dart' hide Assignment;
 import 'package:lazyext/screens/screen.dart';
-import 'package:lazyext/widgets/assignment.dart';
 import 'package:lazyext/widgets/compare.dart';
 
 class CompareScreen extends StatelessWidget {

@@ -17,11 +17,9 @@ void backgroundFetchHeadlessTask(HeadlessTask task) async {
   String taskId = task.taskId;
   bool isTimeout = task.timeout;
   if (isTimeout) {
-    print("[BackgroundFetch] Headless task timed-out: $taskId");
     BackgroundFetch.finish(taskId);
     return;
   }
-  print('[BackgroundFetch] Headless event received.');
   await checkForNewAssignment();
   BackgroundFetch.finish(taskId);
 }
@@ -55,7 +53,7 @@ class _MainWidgetState extends State<MainWidget> {
   }
 
   Future<void> initPlatformState() async {
-    int status = await BackgroundFetch.configure(
+    await BackgroundFetch.configure(
         BackgroundFetchConfig(
             minimumFetchInterval: 15,
             stopOnTerminate: false,
@@ -66,14 +64,11 @@ class _MainWidgetState extends State<MainWidget> {
             requiresStorageNotLow: false,
             requiresDeviceIdle: false,
             requiredNetworkType: NetworkType.ANY), (String taskId) async {
-      print("[BackgroundFetch] Event received $taskId");
       await checkForNewAssignment();
       BackgroundFetch.finish(taskId);
     }, (String taskId) async {
-      print("[BackgroundFetch] TASK TIMEOUT taskId: $taskId");
       BackgroundFetch.finish(taskId);
     });
-    print('[BackgroundFetch] configure success: $status');
     if (!mounted) return;
     BackgroundFetch.start();
   }
