@@ -36,7 +36,12 @@ class GoogleApi<A> {
 
   Future<R?> getResponse<R>(Future<R?>? Function() request) async {
     await waitForApi();
-    return await request();
+    try {
+      return await request();
+    } on AccessDeniedException {
+      await _google._signIn();
+      return await request();
+    }
   }
 
   Future<List<R>> getAll<R>(
