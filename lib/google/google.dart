@@ -38,6 +38,21 @@ class GoogleApi<A> {
     await waitForApi();
     return await request();
   }
+
+  Future<List<R>> getAll<R>(
+      Future<(List<R>, String?)?> Function({String? token, int pageSize})
+          request,
+      {int pageSize = 20}) async {
+    List<R> elems = [];
+    String? lastToken;
+    (List<R>, String?)? result;
+    do {
+      lastToken = result?.$2;
+      result = await request(token: lastToken, pageSize: pageSize);
+      elems.addAll(result?.$1 ?? []);
+    } while (result?.$2 != lastToken || result?.$1.length == pageSize);
+    return elems;
+  }
 }
 
 class Google extends ChangeNotifier {
