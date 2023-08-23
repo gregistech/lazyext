@@ -10,7 +10,6 @@ import 'google/drive.dart';
 import 'google/google.dart';
 import 'screens/compare.dart';
 import 'screens/courses.dart';
-import 'screens/login.dart';
 import 'screens/assignments.dart';
 
 @pragma('vm:entry-point')
@@ -30,7 +29,6 @@ void backgroundFetchHeadlessTask(HeadlessTask task) async {
 Future<void> checkForNewAssignment() async {
   print("Checking for assignment...");
   Google google = Google();
-  await google.signIn();
   Classroom classroom = Classroom(google);
   print((await classroom.getCourses()).$1[0].name);
   print("Done.");
@@ -80,28 +78,15 @@ class _MainWidgetState extends State<MainWidget> {
     BackgroundFetch.start();
   }
 
-  String? authRedirect(BuildContext context, GoRouterState state) {
-    return Provider.of<Google>(context, listen: false).account == null
-        ? "/login"
-        : null;
-  }
-
   late final _router = GoRouter(
     initialLocation: "/courses",
     routes: [
       GoRoute(
-        path: '/login',
-        builder: (context, state) => const LoginScreen(),
-      ),
-      GoRoute(
-          path: '/courses',
-          builder: (context, state) => const CoursesScreen(),
-          redirect: authRedirect),
+          path: '/courses', builder: (context, state) => const CoursesScreen()),
       GoRoute(
           path: '/course/assignments',
           builder: (context, state) =>
-              AssignmentsScreen(course: state.extra as Course),
-          redirect: authRedirect),
+              AssignmentsScreen(course: state.extra as Course)),
       GoRoute(
         path: '/course/assignment',
         builder: (context, state) {

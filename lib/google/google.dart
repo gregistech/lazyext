@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:extension_google_sign_in_as_googleapis_auth/extension_google_sign_in_as_googleapis_auth.dart';
+import 'package:googleapis_auth/googleapis_auth.dart';
 import 'package:http/http.dart';
+import 'package:googleapis_auth/googleapis_auth.dart' as gapis;
+import 'package:lazyext/preferences.dart';
 
 // See https://github.com/dart-lang/sdk/issues/30074, come on...
 typedef ApiCreator<A> = A Function(Client);
@@ -40,16 +43,26 @@ class GoogleApi<A> {
 class Google extends ChangeNotifier {
   late final GoogleSignIn _api = GoogleSignIn(scopes: _scopes);
   List<String> _scopes = [];
-  GoogleSignInAccount? account;
+  GoogleSignInAccount? _account;
+  GoogleSignInAccount? get account {
+    return _account;
+  }
 
-  Future<void> signIn() async {
+  set account(GoogleSignInAccount? account) {
+    _account = account;
+    dynamic prefs = Preferences();
+    account?.authentication.then((GoogleSignInAuthentication auth) =>
+        prefs.googleToken = auth.accessToken);
+  }
+
+  Future<void> _signIn() async {
     _api.onCurrentUserChanged.listen((GoogleSignInAccount? newAccount) {
-      account = newAccount;
+      account ??= newAccount;
       if (account != null) {
         notifyListeners();
       }
     });
-    account = await _api.signInSilently();
+    account ??= await _api.signInSilently();
     account ??= await _api.signIn();
   }
 
@@ -74,7 +87,32 @@ class Google extends ChangeNotifier {
     _api.onCurrentUserChanged.listen(callback);
   }
 
+  Future<AuthClient?> _loadStoredAuthenticatedClient() async {
+    dynamic prefs = Preferences();
+    String? token = await prefs.googleToken;
+    if (token != null) {
+      final gapis.AccessCredentials credentials = gapis.AccessCredentials(
+        gapis.AccessToken(
+          'Bearer',
+          token,
+          DateTime.now().toUtc().add(const Duration(days: 365)),
+        ),
+        null,
+        _scopes,
+      );
+
+      return gapis.authenticatedClient(Client(), credentials);
+    } else {
+      return null;
+    }
+  }
+
   Future<Client?> getAuthenticatedClient() async {
-    return await _api.authenticatedClient();
+    Client? client = await _loadStoredAuthenticatedClient();
+    if (client == null) {
+      await _signIn();
+      client = await _api.authenticatedClient();
+    }
+    return client;
   }
 }
