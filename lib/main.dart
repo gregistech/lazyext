@@ -1,3 +1,4 @@
+import 'package:background_fetch/background_fetch.dart';
 import 'package:flutter/material.dart';
 import 'package:googleapis/classroom/v1.dart' hide Assignment;
 import 'package:lazyext/widgets/assignment.dart';
@@ -17,8 +18,37 @@ Future<void> main() async {
   runApp(MainWidget());
 }
 
-class MainWidget extends StatelessWidget {
-  MainWidget({super.key});
+class MainWidget extends StatefulWidget {
+  const MainWidget({super.key});
+
+  @override
+  State<MainWidget> createState() => _MainWidgetState();
+}
+
+class _MainWidgetState extends State<MainWidget> {
+  Future<void> initPlatformState() async {
+    int status = await BackgroundFetch.configure(
+        BackgroundFetchConfig(
+            minimumFetchInterval: 15,
+            stopOnTerminate: false,
+            startOnBoot: true,
+            requiresBatteryNotLow: false,
+            requiresCharging: false,
+            requiresStorageNotLow: false,
+            requiresDeviceIdle: false,
+            requiredNetworkType: NetworkType.ANY), (String taskId) async {
+      print("[BackgroundFetch] Event received $taskId");
+      Google google = Google();
+      Classroom classroom = Classroom(google);
+      print((await classroom.getCourses()).$1[0].name);
+      BackgroundFetch.finish(taskId);
+    }, (String taskId) async {
+      print("[BackgroundFetch] TASK TIMEOUT taskId: $taskId");
+      BackgroundFetch.finish(taskId);
+    });
+    print('[BackgroundFetch] configure success: $status');
+    if (!mounted) return;
+  }
 
   String? authRedirect(BuildContext context, GoRouterState state) {
     return Provider.of<Google>(context, listen: false).account == null
