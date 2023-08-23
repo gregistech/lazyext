@@ -54,7 +54,8 @@ class AssignmentListItem extends StatelessWidget {
     return TextButton(
       child: Text(assignment.name),
       onPressed: () {
-        context.push("/course/assignment", extra: (course, assignment));
+        context.push("/courses/assignments/assignment",
+            extra: (course, assignment));
       },
     );
   }

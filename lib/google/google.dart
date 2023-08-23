@@ -39,6 +39,8 @@ class GoogleApi<A> {
     try {
       return await request();
     } on AccessDeniedException {
+      dynamic prefs = Preferences();
+      prefs.googleToken = null;
       await _google._signIn();
       return await request();
     }
