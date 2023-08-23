@@ -33,8 +33,9 @@ class OriginalView extends StatelessWidget {
 }
 
 class MergedView extends StatefulWidget {
+  final List<String> dest;
   final List<Exercise> exercises;
-  const MergedView({super.key, required this.exercises});
+  const MergedView({super.key, required this.exercises, required this.dest});
 
   @override
   State<MergedView> createState() => _MergedViewState();
@@ -76,7 +77,7 @@ class _MergedViewState extends State<MergedView>
                   return Column(children: [
                     TextButton(
                         onPressed: () {
-                          storage?.savePDF([], document);
+                          storage?.savePDF(widget.dest, document);
                         },
                         child: const Text("Save")),
                     Expanded(
@@ -222,9 +223,10 @@ class _ExercisesViewState extends State<ExercisesView> {
 }
 
 class CompareView extends StatelessWidget {
+  final List<String> dest;
   final String path;
   final ExerciseExtractor _extractor = ExerciseExtractor();
-  CompareView({super.key, required this.path});
+  CompareView({super.key, required this.path, required this.dest});
 
   @override
   Widget build(BuildContext context) {
@@ -252,7 +254,7 @@ class CompareView extends StatelessWidget {
               AsyncSnapshot<(String, List<Exercise>)?> snapshot) {
             (String, List<Exercise>)? data = snapshot.data;
             if (data != null) {
-              return MergedView(exercises: data.$2);
+              return MergedView(dest: dest, exercises: data.$2);
             } else {
               return const Placeholder();
             }

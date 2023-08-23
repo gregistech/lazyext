@@ -44,23 +44,27 @@ class Assignment implements Comparable<Assignment> {
 }
 
 class AssignmentListItem extends StatelessWidget {
+  final Course course;
   final Assignment assignment;
-  const AssignmentListItem({super.key, required this.assignment});
+  const AssignmentListItem(
+      {super.key, required this.course, required this.assignment});
 
   @override
   Widget build(BuildContext context) {
     return TextButton(
       child: Text(assignment.name),
       onPressed: () {
-        context.push("/course/assignment", extra: assignment);
+        context.push("/course/assignment", extra: (course, assignment));
       },
     );
   }
 }
 
 class AssignmentView extends StatelessWidget {
+  final Course course;
   final Assignment assignment;
-  const AssignmentView({super.key, required this.assignment});
+  const AssignmentView(
+      {super.key, required this.course, required this.assignment});
 
   @override
   Widget build(BuildContext context) {
@@ -94,7 +98,10 @@ class AssignmentView extends StatelessWidget {
                     if (path != null) {
                       // ignore: use_build_context_synchronously
                       if (!context.mounted) return;
-                      context.push("/compare", extra: path);
+                      context.push("/compare", extra: (
+                        [course.name ?? "unknown", assignment.name],
+                        path
+                      ));
                     }
                   }
                 }
@@ -179,6 +186,6 @@ class _AssignmentListViewState extends State<AssignmentListView> {
         comparator: (a, b) => b.compareTo(a),
         shouldSort: true,
         itemBuilder: (BuildContext context, Assignment item, int index) =>
-            AssignmentListItem(assignment: item));
+            AssignmentListItem(course: widget.course, assignment: item));
   }
 }

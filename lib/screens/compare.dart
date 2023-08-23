@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:googleapis/classroom/v1.dart' hide Assignment;
 import 'package:lazyext/screens/screen.dart';
+import 'package:lazyext/widgets/assignment.dart';
 import 'package:lazyext/widgets/compare.dart';
 
 class CompareScreen extends StatelessWidget {
+  final List<String> dest;
   final String path;
-  const CompareScreen({super.key, required this.path});
+  const CompareScreen({super.key, required this.path, required this.dest});
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +23,7 @@ class CompareScreen extends StatelessWidget {
         bottom: const TabBar(
           tabs: tabs,
         ),
-        child: CompareView(path: path),
+        child: CompareView(dest: dest, path: path),
       ),
     );
   }

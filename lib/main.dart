@@ -15,7 +15,7 @@ import 'screens/assignments.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(MainWidget());
+  runApp(const MainWidget());
 }
 
 class MainWidget extends StatefulWidget {
@@ -73,14 +73,22 @@ class _MainWidgetState extends State<MainWidget> {
               AssignmentsScreen(course: state.extra as Course),
           redirect: authRedirect),
       GoRoute(
-          path: '/course/assignment',
-          builder: (context, state) => AssignmentScreen(
-                assignment: state.extra as Assignment,
-              )),
+        path: '/course/assignment',
+        builder: (context, state) {
+          (Course, Assignment) extra = state.extra as (Course, Assignment);
+          return AssignmentScreen(
+            course: extra.$1,
+            assignment: extra.$2,
+          );
+        },
+      ),
       GoRoute(
           path: '/compare',
-          builder: (context, state) =>
-              CompareScreen(path: state.extra as String)),
+          builder: (context, state) {
+            (List<String>, String) extra =
+                state.extra as (List<String>, String);
+            return CompareScreen(dest: extra.$1, path: extra.$2);
+          }),
     ],
   );
 

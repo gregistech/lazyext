@@ -15,9 +15,24 @@ class FileStorage implements Storage {
   final String root;
   FileStorage(this.root);
 
+  String sanitizeDirectoryName(String input) {
+    String sanitized = input.replaceAll(RegExp(r'[^\w\s-]'), '_');
+    sanitized = sanitized.trim();
+    sanitized = sanitized.replaceAll(RegExp(r'\s+'), ' ');
+    sanitized = sanitized.replaceAll(' ', '_');
+    return sanitized;
+  }
+
   @override
   Future<File> savePDF(Path path, PDFDocument pdf) async {
-    String dest = "$root/${path.join("/")}/${const Uuid().v4()}.pdf";
+    Path sanitized = [];
+    for (String step in path) {
+      sanitized.add(sanitizeDirectoryName(step));
+    }
+    Directory dir = Directory("$root/${sanitized.join("/")}");
+    await dir.create(recursive: true);
+    String name = const Uuid().v4();
+    String dest = "${dir.path}/$name.pdf";
     pdf.save(dest.toJString(),
         "pretty,ascii,compress-images,compress-fonts".toJString());
     return File(dest);
