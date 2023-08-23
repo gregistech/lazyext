@@ -16,6 +16,7 @@ class MonitorScreen extends StatefulWidget {
 
 class _MonitorScreenState extends State<MonitorScreen> {
   dynamic prefs = Preferences();
+
   @override
   Widget build(BuildContext context) {
     return ScreenWidget(
@@ -25,11 +26,25 @@ class _MonitorScreenState extends State<MonitorScreen> {
               Provider.of<Classroom>(context, listen: false)
                   .getCourses(token: token),
           itemBuilder: (BuildContext context, Course course, int index) =>
-              CheckboxListTile(
-                title: Text(course.name ?? "unknown"),
-                value: false,
-                onChanged: (bool? value) {},
-              )),
+              FutureBuilder(
+                  future: prefs.monitor,
+                  builder: (context, AsyncSnapshot<dynamic> snapshot) {
+                    return CheckboxListTile(
+                      title: Text(course.name ?? "unknown"),
+                      value: (snapshot.data ?? "").contains(course.id),
+                      onChanged: (bool? value) {
+                        setState(() {
+                          if (value ?? false) {
+                            prefs.monitor =
+                                (snapshot.data ?? "") + "${course.id},";
+                          } else {
+                            prefs.monitor = (snapshot.data ?? "")
+                                .replaceAll("${course.id},", "");
+                          }
+                        });
+                      },
+                    );
+                  })),
     );
   }
 }
