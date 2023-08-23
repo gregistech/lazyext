@@ -13,9 +13,33 @@ import 'screens/courses.dart';
 import 'screens/login.dart';
 import 'screens/assignments.dart';
 
+@pragma('vm:entry-point')
+void backgroundFetchHeadlessTask(HeadlessTask task) async {
+  String taskId = task.taskId;
+  bool isTimeout = task.timeout;
+  if (isTimeout) {
+    print("[BackgroundFetch] Headless task timed-out: $taskId");
+    BackgroundFetch.finish(taskId);
+    return;
+  }
+  print('[BackgroundFetch] Headless event received.');
+  await checkForNewAssignment();
+  BackgroundFetch.finish(taskId);
+}
+
+Future<void> checkForNewAssignment() async {
+  print("Checking for assignment...");
+  Google google = Google();
+  await google.signIn();
+  Classroom classroom = Classroom(google);
+  print((await classroom.getCourses()).$1[0].name);
+  print("Done.");
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const MainWidget());
+  BackgroundFetch.registerHeadlessTask(backgroundFetchHeadlessTask);
 }
 
 class MainWidget extends StatefulWidget {
@@ -26,11 +50,18 @@ class MainWidget extends StatefulWidget {
 }
 
 class _MainWidgetState extends State<MainWidget> {
+  @override
+  initState() {
+    initPlatformState();
+    super.initState();
+  }
+
   Future<void> initPlatformState() async {
     int status = await BackgroundFetch.configure(
         BackgroundFetchConfig(
             minimumFetchInterval: 15,
             stopOnTerminate: false,
+            enableHeadless: true,
             startOnBoot: true,
             requiresBatteryNotLow: false,
             requiresCharging: false,
@@ -38,9 +69,7 @@ class _MainWidgetState extends State<MainWidget> {
             requiresDeviceIdle: false,
             requiredNetworkType: NetworkType.ANY), (String taskId) async {
       print("[BackgroundFetch] Event received $taskId");
-      Google google = Google();
-      Classroom classroom = Classroom(google);
-      print((await classroom.getCourses()).$1[0].name);
+      await checkForNewAssignment();
       BackgroundFetch.finish(taskId);
     }, (String taskId) async {
       print("[BackgroundFetch] TASK TIMEOUT taskId: $taskId");
@@ -48,6 +77,7 @@ class _MainWidgetState extends State<MainWidget> {
     });
     print('[BackgroundFetch] configure success: $status');
     if (!mounted) return;
+    BackgroundFetch.start();
   }
 
   String? authRedirect(BuildContext context, GoRouterState state) {
