@@ -19,6 +19,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return ScreenWidget(
       title: "Settings",
       child: ListView(children: [
+        FutureBuilder<dynamic>(
+            future: prefs.theme,
+            builder: (context, snapshot) {
+              return SwitchListTile(
+                  secondary: const Icon(Icons.dark_mode_rounded),
+                  title: const Text("Dark theme"),
+                  value: (snapshot.data ?? "dark") == "dark",
+                  onChanged: (bool value) {
+                    setState(() {
+                      prefs.theme = value ? "dark" : "light";
+                    });
+                  });
+            }),
         ListTile(
           leading: const Icon(Icons.storage_rounded),
           title: const Text("Storage root"),

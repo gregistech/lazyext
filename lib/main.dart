@@ -1,6 +1,8 @@
+import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart' hide Material;
 import 'package:googleapis/classroom/v1.dart' hide Assignment;
 import 'package:lazyext/background.dart';
+import 'package:lazyext/preferences.dart';
 import 'package:lazyext/screens/monitor.dart';
 import 'package:lazyext/screens/settings.dart';
 import 'package:lazyext/widgets/assignment.dart';
@@ -89,6 +91,7 @@ class _MainWidgetState extends State<MainWidget> {
 
   @override
   Widget build(BuildContext context) {
+    dynamic prefs = Preferences();
     return MultiProvider(
       providers: [
         ChangeNotifierProvider<Google>(
@@ -99,13 +102,21 @@ class _MainWidgetState extends State<MainWidget> {
         ListenableProxyProvider<Google, Drive>(
             update: (_, google, __) => Drive(google))
       ],
-      child: MaterialApp.router(
-        title: 'LazyExt',
-        theme: ThemeData(
-          useMaterial3: true,
-        ),
-        routerConfig: _router,
-      ),
+      child:
+          DynamicColorBuilder(builder: (ColorScheme? light, ColorScheme? dark) {
+        return FutureBuilder<dynamic>(
+            future: prefs.theme,
+            builder: (context, snapshot) {
+              return MaterialApp.router(
+                title: 'LazyExt',
+                theme: ThemeData(
+                    useMaterial3: true,
+                    colorScheme:
+                        (snapshot.data ?? "dark") == "dark" ? dark : light),
+                routerConfig: _router,
+              );
+            });
+      }),
     );
   }
 }
