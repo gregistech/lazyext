@@ -106,15 +106,26 @@ class _MainWidgetState extends State<MainWidget> {
           DynamicColorBuilder(builder: (ColorScheme? light, ColorScheme? dark) {
         return Consumer<ThemeProvider>(builder: (context, theme, _) {
           return FutureBuilder<bool>(
-              future: theme.dark,
-              builder: (context, snapshot) {
-                return MaterialApp.router(
-                  title: 'LazyExt',
-                  theme: ThemeData(
-                      useMaterial3: true,
-                      colorScheme: (snapshot.data ?? true) ? dark : light),
-                  routerConfig: _router,
-                );
+              future: theme.followSystem,
+              builder: (context, systemSnapshot) {
+                return FutureBuilder<bool>(
+                    future: theme.dark,
+                    builder: (context, darkSnapshot) {
+                      return MaterialApp.router(
+                        title: 'LazyExt',
+                        theme: ThemeData(
+                            useMaterial3: true,
+                            colorScheme: ((systemSnapshot.data ?? true)
+                                ? (MediaQuery.of(context).platformBrightness ==
+                                        Brightness.dark
+                                    ? dark
+                                    : light)
+                                : (darkSnapshot.data ?? true)
+                                    ? dark
+                                    : light)),
+                        routerConfig: _router,
+                      );
+                    });
               });
         });
       }),

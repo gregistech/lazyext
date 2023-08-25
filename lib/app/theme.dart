@@ -5,7 +5,14 @@ class ThemeProvider with ChangeNotifier {
   final dynamic prefs = Preferences();
 
   set followSystem(Future<bool> value) {
-    value.then((value) => prefs)
+    value.then((value) {
+      prefs.followSystem = value.toString();
+      notifyListeners();
+    });
+  }
+
+  Future<bool> get followSystem async {
+    return (await prefs.followSystem) == "true";
   }
 
   set dark(Future<bool> value) {
