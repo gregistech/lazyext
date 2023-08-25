@@ -36,13 +36,7 @@ class GoogleApi<A> {
 
   Future<R?> getResponse<R>(Future<R?>? Function() request) async {
     await waitForApi();
-    try {
-      return await request();
-    } on AccessDeniedException {
-      await _google.invalidateStoredAccount();
-      await _google.signIn();
-      return await request();
-    }
+    return await request();
   }
 
   Future<List<R>> getAll<R>(
@@ -54,7 +48,8 @@ class GoogleApi<A> {
     (List<R>, String?)? result;
     do {
       lastToken = result?.$2;
-      result = await request(token: lastToken, pageSize: pageSize);
+      result = await getResponse(
+          () => request(token: lastToken, pageSize: pageSize));
       elems.addAll(result?.$1 ?? []);
     } while (result?.$2 != lastToken || result?.$1.length == pageSize);
     return elems;
@@ -88,7 +83,7 @@ class Google extends ChangeNotifier {
   }
 
   Future<void> signIn() async {
-    account = await _api.signInSilently();
+    account ??= await _api.signInSilently();
     account ??= await _api.signIn();
   }
 
