@@ -11,9 +11,14 @@ class ScreenWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-          title: Text(title),
-          bottom: bottom,
-        ),
+            title: Text(title),
+            bottom: bottom,
+            leading: IconButton(
+              icon: const Icon(Icons.menu_rounded),
+              onPressed: () {
+                Scaffold.of(context).openDrawer();
+              },
+            )),
         body:
             Flex(direction: Axis.vertical, children: [Expanded(child: child)]));
   }

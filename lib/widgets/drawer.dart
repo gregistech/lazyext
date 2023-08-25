@@ -66,7 +66,7 @@ class MainDrawer extends StatelessWidget {
           title: const Text("Courses"),
           onTap: () {
             context.go("/courses");
-            context.pop();
+            Scaffold.of(context).openEndDrawer();
           },
         ),
         ListTile(
@@ -74,7 +74,7 @@ class MainDrawer extends StatelessWidget {
           title: const Text("Settings"),
           onTap: () {
             context.push("/settings");
-            context.pop();
+            Scaffold.of(context).openEndDrawer();
           },
         )
       ],

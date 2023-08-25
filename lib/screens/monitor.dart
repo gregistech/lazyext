@@ -20,7 +20,7 @@ class _MonitorScreenState extends State<MonitorScreen> {
   @override
   Widget build(BuildContext context) {
     return ScreenWidget(
-      title: "Settings",
+      title: "Courses to fetch",
       child: GPaginatedListView<String?, Course>(
           getPage: (pageSize, token) =>
               Provider.of<Classroom>(context, listen: false)

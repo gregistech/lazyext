@@ -20,13 +20,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
       title: "Settings",
       child: ListView(children: [
         ListTile(
-          title: const Text("Pick storage root"),
+          leading: const Icon(Icons.storage_rounded),
+          title: const Text("Storage root"),
           onTap: () async {
             prefs.storageRoot = await FilePicker.platform.getDirectoryPath();
           },
         ),
         ListTile(
-          title: const Text("Courses to monitor in background"),
+          leading: const Icon(Icons.download_rounded),
+          title: const Text("Courses to fetch in background"),
           onTap: () {
             context.push("/settings/monitor");
           },
