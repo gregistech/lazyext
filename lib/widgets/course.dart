@@ -19,18 +19,16 @@ class CourseListItem extends StatelessWidget {
         builder: (BuildContext context, AsyncSnapshot<Teacher?> snapshot) {
           Teacher? teacher = snapshot.data;
           return ListTile(
-              onTap: () => context.push("/courses/assignments", extra: course),
-              leading: ProfilePicture(
-                name: teacher?.profile?.name?.fullName ?? "Anonymous",
-                img: teacher?.profile?.photoUrl,
-                radius: 21,
-                fontsize: 17,
-              ),
-              title: Text(course.name ?? "UNKNOWN"),
-              subtitle: Visibility(
-                visible: teacher != null,
-                child: Text(teacher?.profile?.name?.fullName ?? ""),
-              ));
+            onTap: () => context.push("/courses/assignments", extra: course),
+            leading: ProfilePicture(
+              name: teacher?.profile?.name?.fullName ?? "Anonymous",
+              img: "https:${teacher?.profile?.photoUrl}",
+              radius: 21,
+              fontsize: 17,
+            ),
+            title: Text(course.name ?? "UNKNOWN"),
+            subtitle: Text(teacher?.profile?.name?.fullName ?? ""),
+          );
         });
   }
 }
