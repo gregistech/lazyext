@@ -10,6 +10,9 @@ class Classroom extends GoogleApi<ClassroomApi> with ChangeNotifier {
     ClassroomApi.classroomAnnouncementsReadonlyScope,
     ClassroomApi.classroomCoursesReadonlyScope,
     ClassroomApi.classroomCourseworkMeReadonlyScope,
+    ClassroomApi.classroomRostersReadonlyScope,
+    ClassroomApi.classroomProfileEmailsScope,
+    ClassroomApi.classroomProfilePhotosScope
   ];
 
   Classroom(Google google)
@@ -20,6 +23,10 @@ class Classroom extends GoogleApi<ClassroomApi> with ChangeNotifier {
     ListCoursesResponse? response = await getResponse(
         () => api?.courses.list(pageToken: token, pageSize: pageSize));
     return (response?.courses ?? [], response?.nextPageToken);
+  }
+
+  Future<Teacher?> getTeacher(String courseId, String teacherId) async {
+    return getResponse(() => api?.courses.teachers.get(courseId, teacherId));
   }
 
   Future<(List<CourseWork>, String?)> getCourseWork(Course course,
