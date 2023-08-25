@@ -33,6 +33,9 @@ class _GPaginatedListViewState<T, R> extends State<GPaginatedListView<T, R>> {
     } on Exception {
       // Could be scheduled after dispose, which causes a crash.
       return;
+    } on FlutterError {
+      // Could be scheduled after dispose, which causes a crash.
+      return;
     }
     if (widget.shouldSort) {
       _pagingController.itemList?.sort(widget.comparator);
