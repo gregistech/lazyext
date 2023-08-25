@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart' hide Material;
+import 'package:flutter_profile_picture/flutter_profile_picture.dart';
 import 'package:go_router/go_router.dart';
 import 'package:googleapis/classroom/v1.dart';
 import 'package:googleapis/drive/v3.dart' hide Drive;
@@ -55,60 +56,93 @@ class AssignmentListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      title: Text(assignment.name.trim()),
-      subtitle: Text(DateFormat.yMMMMEEEEd().format(assignment.creationTime)),
-      trailing: Text(assignment.materials.length.toString()),
-      onTap: () {
-        context.push("/courses/assignments/assignment",
-            extra: (course, assignment));
-      },
-    );
+    return FutureBuilder<Teacher?>(
+        future: Provider.of<Classroom>(context, listen: false)
+            .getTeacher(course.id ?? "", assignment.creatorId),
+        builder: (context, snapshot) {
+          Teacher? teacher = snapshot.data;
+          return ListTile(
+            leading: ProfilePicture(
+              name: teacher?.profile?.name?.fullName ?? "",
+              img: teacher?.profile?.photoUrl == null
+                  ? null
+                  : "https:${teacher?.profile?.photoUrl}",
+              radius: 21,
+              fontsize: 21,
+            ),
+            title: Text(assignment.name.trim()),
+            subtitle: Text(
+                "${DateFormat.yMMMMEEEEd().format(assignment.creationTime)}${teacher?.profile?.name?.fullName == null ? '' : '\n${teacher?.profile?.name?.fullName}'}"),
+            trailing: Text(assignment.materials.length.toString()),
+            onTap: () {
+              context.push("/courses/assignments/assignment",
+                  extra: (course, assignment));
+            },
+          );
+        });
   }
 }
 
-class AssignmentView extends StatelessWidget {
+class AssignmentView extends StatefulWidget {
   final Course course;
   final Assignment assignment;
   const AssignmentView(
       {super.key, required this.course, required this.assignment});
 
   @override
+  State<AssignmentView> createState() => _AssignmentViewState();
+}
+
+class _AssignmentViewState extends State<AssignmentView> {
+  bool loading = false;
+
+  @override
   Widget build(BuildContext context) {
     List<Widget> materials = [];
-    for (Material material in assignment.materials) {
+    for (Material material in widget.assignment.materials) {
       DriveFile? driveFile = material.driveFile?.driveFile;
       if (driveFile != null) {
         materials.add(FutureBuilder(
           future: Provider.of<Drive>(context, listen: false)
               .driveFileToFile(driveFile),
           builder: (BuildContext context, AsyncSnapshot<File?> snapshot) =>
-              TextButton(
-            child: Text(snapshot.data?.name ?? "UNKNOWN"),
-            onPressed: () async {
-              File? file = snapshot.data;
-              if (file != null) {
-                File? gdoc = await Provider.of<Drive>(context, listen: false)
-                    .fileToGoogleDoc(file);
-                if (gdoc != null) {
-                  // ignore: use_build_context_synchronously
-                  if (!context.mounted) return;
-                  Media? pdf = await Provider.of<Drive>(context, listen: false)
-                      .fileToPdf(gdoc);
-                  if (pdf != null) {
+              ListTile(
+            leading: const Icon(Icons.open_in_new_rounded),
+            title: Text(snapshot.data?.name ?? "UNKNOWN"),
+            onTap: () async {
+              if (!loading) {
+                setState(() {
+                  loading = true;
+                });
+                File? file = snapshot.data;
+                if (file != null) {
+                  File? gdoc = await Provider.of<Drive>(context, listen: false)
+                      .fileToGoogleDoc(file);
+                  if (gdoc != null) {
                     // ignore: use_build_context_synchronously
                     if (!context.mounted) return;
-                    String? path = await Provider.of<Drive>(context,
-                            listen: false)
-                        .downloadMedia(pdf,
-                            "${(await getApplicationDocumentsDirectory()).path}/test.pdf");
-                    if (path != null) {
+                    Media? pdf =
+                        await Provider.of<Drive>(context, listen: false)
+                            .fileToPdf(gdoc);
+                    if (pdf != null) {
                       // ignore: use_build_context_synchronously
                       if (!context.mounted) return;
-                      context.push("/compare", extra: (
-                        [course.name ?? "unknown", assignment.name],
-                        path
-                      ));
+                      String? path = await Provider.of<Drive>(context,
+                              listen: false)
+                          .downloadMedia(pdf,
+                              "${(await getApplicationDocumentsDirectory()).path}/test.pdf");
+                      if (path != null) {
+                        // ignore: use_build_context_synchronously
+                        if (!context.mounted) return;
+                        loading = false;
+                        context.push("/compare", extra: (
+                          [
+                            widget.course.name ?? "unknown",
+                            widget.assignment.name
+                          ],
+                          path
+                        ));
+                      }
                     }
                   }
                 }
@@ -120,10 +154,34 @@ class AssignmentView extends StatelessWidget {
     }
     return Column(
       children: [
-        Text(assignment.name),
-        Text(assignment.text),
-        Column(
-          children: materials,
+        FutureBuilder<Teacher?>(
+            future: Provider.of<Classroom>(context, listen: false).getTeacher(
+                widget.course.id ?? "", widget.assignment.creatorId),
+            builder: (BuildContext context, AsyncSnapshot<Teacher?> snapshot) {
+              Teacher? teacher = snapshot.data;
+              return ListTile(
+                isThreeLine: true,
+                leading: ProfilePicture(
+                  name: teacher?.profile?.name?.fullName ?? "",
+                  img: teacher?.profile?.photoUrl == null
+                      ? null
+                      : "https:${teacher?.profile?.photoUrl}",
+                  radius: 21,
+                  fontsize: 21,
+                ),
+                title: Text(widget.assignment.name.trim()),
+                subtitle: Text(
+                  "${teacher?.profile?.name?.fullName == null ? "" : "- ${teacher?.profile?.name?.fullName}"}${widget.assignment.text.isEmpty ? "" : '\n\n${widget.assignment.text}'}",
+                ),
+              );
+            }),
+        Visibility(
+            visible: loading,
+            child: const LinearProgressIndicator(value: null)),
+        Expanded(
+          child: ListView(
+            children: materials,
+          ),
         )
       ],
     );
