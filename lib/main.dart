@@ -4,6 +4,7 @@ import 'package:lazyext/background.dart';
 import 'package:lazyext/screens/monitor.dart';
 import 'package:lazyext/screens/settings.dart';
 import 'package:lazyext/widgets/assignment.dart';
+import 'package:lazyext/widgets/drawer.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 
@@ -40,27 +41,7 @@ class _MainWidgetState extends State<MainWidget> {
           builder: (BuildContext context, GoRouterState state, Widget child) {
             return Scaffold(
               body: child,
-              drawer: Drawer(
-                  child: ListView(
-                padding: EdgeInsets.zero,
-                children: [
-                  const DrawerHeader(child: Text("Drawer")),
-                  ListTile(
-                    title: const Text("Courses"),
-                    onTap: () {
-                      context.go("/courses");
-                      context.pop();
-                    },
-                  ),
-                  ListTile(
-                    title: const Text("Settings"),
-                    onTap: () {
-                      context.push("/settings");
-                      context.pop();
-                    },
-                  )
-                ],
-              )),
+              drawer: const MainDrawer(),
             );
           },
           routes: [

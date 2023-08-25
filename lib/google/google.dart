@@ -41,7 +41,7 @@ class GoogleApi<A> {
     } on AccessDeniedException {
       dynamic prefs = Preferences();
       prefs.googleToken = null;
-      await _google._signIn();
+      await _google.signIn();
       return await request();
     }
   }
@@ -77,15 +77,16 @@ class Google extends ChangeNotifier {
         prefs.googleToken = auth.accessToken);
   }
 
-  Future<void> _signIn() async {
-    _api.onCurrentUserChanged.listen((GoogleSignInAccount? newAccount) {
-      account ??= newAccount;
-      if (account != null) {
-        notifyListeners();
-      }
-    });
+  Future<void> signIn() async {
     account ??= await _api.signInSilently();
     account ??= await _api.signIn();
+    notifyListeners();
+  }
+
+  Future<void> logOut() async {
+    await _api.disconnect();
+    account = null;
+    notifyListeners();
   }
 
   Future<bool> requestScopes(List<String> scopes) async {
@@ -132,7 +133,7 @@ class Google extends ChangeNotifier {
   Future<Client?> getAuthenticatedClient() async {
     Client? client = await _loadStoredAuthenticatedClient();
     if (client == null) {
-      await _signIn();
+      await signIn();
       client = await _api.authenticatedClient();
     }
     return client;
