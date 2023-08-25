@@ -10,7 +10,7 @@ class Preferences {
     } else if (invocation.isSetter) {
       (await prefs).setString(
           invocation.memberName.toString().replaceAll("=", ""),
-          invocation.positionalArguments.first);
+          invocation.positionalArguments.first ?? "");
     } else {
       super.noSuchMethod(invocation);
     }

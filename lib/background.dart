@@ -65,62 +65,65 @@ class ClassroomPDFBackgroundService {
         return false;
       }).toList();
       for (Course course in courses) {
-        List<Announcement> announcements =
-            (await classroom.getAnnouncements(course)).$1;
-        Assignment? lastAnnouncement;
-        if (announcements.isNotEmpty) {
-          lastAnnouncement = Assignment.fromAnnouncement(announcements[0]);
-        }
-        List<CourseWork> courseWork =
-            (await classroom.getCourseWork(course)).$1;
-        Assignment? lastCourseWork;
-        if (courseWork.isNotEmpty) {
-          lastCourseWork = Assignment.fromCourseWork(courseWork[0]);
-        }
-
-        Assignment? lastAssignment;
-        if (lastAnnouncement != null && lastCourseWork != null) {
-          lastAssignment = lastCourseWork.compareTo(lastAnnouncement) >= 0
-              ? lastCourseWork
-              : lastAnnouncement;
+        List<Announcement> announcements;
+        List<CourseWork> courseWork;
+        if (await prefs.lastAssignment == null) {
+          announcements =
+              (await classroom.getAnnouncements(course, pageSize: 1)).$1;
+          courseWork = (await classroom.getCourseWork(course, pageSize: 1)).$1;
         } else {
-          lastAssignment = lastCourseWork ?? lastAnnouncement;
+          announcements = await classroom.getAll((
+                  {int pageSize = 20, String? token}) async =>
+              classroom.getAnnouncements(course,
+                  pageSize: pageSize,
+                  token: token,
+                  cutoffDate: (await prefs.lastAssignment)));
+          courseWork = await classroom.getAll((
+                  {int pageSize = 20, String? token}) async =>
+              classroom.getCourseWork(course,
+                  pageSize: pageSize,
+                  token: token,
+                  cutoffDate: (await prefs.lastAssignment)));
         }
-        if (lastAssignment != null) {
-          if (!((await prefs.doneAssignments) as String? ?? "")
-              .contains(lastAssignment.id)) {
-            prefs.doneAssignments =
-                "${(await prefs.doneAssignments) as String? ?? ""}${lastAssignment.id},";
-            List<Exercise> exercises = [];
-            Drive driveApi = Drive(google);
-            ExerciseExtractor extractor = ExerciseExtractor();
-            for (Material material in lastAssignment.materials) {
-              DriveFile? driveFile = material.driveFile?.driveFile;
-              if (driveFile != null) {
-                drive.File? file = await driveApi.driveFileToFile(driveFile);
-                if (file != null) {
-                  drive.File? gdoc = await driveApi.fileToGoogleDoc(file);
-                  if (gdoc != null) {
-                    drive.Media? pdf = await driveApi.fileToPdf(gdoc);
-                    if (pdf != null) {
-                      String? path = await driveApi.downloadMedia(pdf,
-                          "${(await getTemporaryDirectory()).path}/${const Uuid().v4()}.pdf");
-                      if (path != null) {
-                        File file = File(path);
-                        exercises.addAll(
-                            (await extractor.getExerciseCollection(file)).$2);
-                      }
+        List<Assignment> assignments = [];
+        for (Announcement announcement in announcements) {
+          assignments.add(Assignment.fromAnnouncement(announcement));
+        }
+        for (CourseWork elem in courseWork) {
+          assignments.add(Assignment.fromCourseWork(elem));
+        }
+        prefs.lastAssignment = DateTime.now().toIso8601String();
+
+        for (Assignment assignment in assignments) {
+          List<Exercise> exercises = [];
+          Drive driveApi = Drive(google);
+          ExerciseExtractor extractor = ExerciseExtractor();
+          for (Material material in assignment.materials) {
+            DriveFile? driveFile = material.driveFile?.driveFile;
+            if (driveFile != null) {
+              drive.File? file = await driveApi.driveFileToFile(driveFile);
+              if (file != null) {
+                drive.File? gdoc = await driveApi.fileToGoogleDoc(file);
+                if (gdoc != null) {
+                  drive.Media? pdf = await driveApi.fileToPdf(gdoc);
+                  if (pdf != null) {
+                    String? path = await driveApi.downloadMedia(pdf,
+                        "${(await getTemporaryDirectory()).path}/${const Uuid().v4()}.pdf");
+                    if (path != null) {
+                      File file = File(path);
+                      exercises.addAll(
+                          (await extractor.getExerciseCollection(file)).$2);
                     }
                   }
                 }
               }
             }
-            Merger merger = PracticeMerger();
-            PDFDocument pdf = await merger.exercisesToPDFDocument(exercises);
-            Storage? storage = await AndroidFileStorage().storage;
-            await storage
-                ?.savePDF([course.name ?? "unknown", lastAssignment.name], pdf);
           }
+          Merger merger = PracticeMerger();
+          PDFDocument pdf = await merger.exercisesToPDFDocument(exercises);
+          Storage? storage = await AndroidFileStorage().storage;
+          await storage
+              ?.savePDF([course.name ?? "unknown", assignment.name], pdf);
         }
       }
     }
