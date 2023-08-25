@@ -73,6 +73,7 @@ class MainDrawer extends StatelessWidget {
           ),
         ),
         ListTile(
+          leading: const Icon(Icons.class_rounded),
           title: const Text("Courses"),
           onTap: () {
             context.go("/courses");
@@ -80,6 +81,7 @@ class MainDrawer extends StatelessWidget {
           },
         ),
         ListTile(
+          leading: const Icon(Icons.settings),
           title: const Text("Settings"),
           onTap: () {
             context.push("/settings");
