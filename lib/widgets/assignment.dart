@@ -2,6 +2,7 @@ import 'package:flutter/material.dart' hide Material;
 import 'package:go_router/go_router.dart';
 import 'package:googleapis/classroom/v1.dart';
 import 'package:googleapis/drive/v3.dart' hide Drive;
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -11,6 +12,7 @@ import 'g_paginated_list_view.dart';
 
 class Assignment implements Comparable<Assignment> {
   late final String id;
+  late final String creatorId;
   late final String name;
   late final String text;
   late final List<Material> materials;
@@ -19,6 +21,7 @@ class Assignment implements Comparable<Assignment> {
   Assignment(this.id, this.name, this.text, this.materials, this.creationTime);
   Assignment.fromAnnouncement(Announcement announcement) {
     id = announcement.id ?? "";
+    creatorId = announcement.creatorUserId ?? "";
     text = announcement.text ?? "";
     name = announcement.text?.substring(
             0,
@@ -31,6 +34,7 @@ class Assignment implements Comparable<Assignment> {
   }
   Assignment.fromCourseWork(CourseWork courseWork) {
     id = courseWork.id ?? "";
+    creatorId = courseWork.creatorUserId ?? "";
     text = courseWork.description ?? "";
     name = courseWork.title ?? "";
     materials = courseWork.materials ?? [];
@@ -51,9 +55,11 @@ class AssignmentListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextButton(
-      child: Text(assignment.name),
-      onPressed: () {
+    return ListTile(
+      title: Text(assignment.name.trim()),
+      subtitle: Text(DateFormat.yMMMMEEEEd().format(assignment.creationTime)),
+      trailing: Text(assignment.materials.length.toString()),
+      onTap: () {
         context.push("/courses/assignments/assignment",
             extra: (course, assignment));
       },
@@ -178,7 +184,14 @@ class _AssignmentListViewState extends State<AssignmentListView> {
                   .toList();
 
           return (
-            assignments,
+            assignments.where((Assignment assignment) {
+              for (Material material in assignment.materials) {
+                if (material.driveFile != null) {
+                  return true;
+                }
+              }
+              return false;
+            }).toList(),
             announcementToken == null && courseWorkToken == null
                 ? null
                 : (announcementToken, courseWorkToken)

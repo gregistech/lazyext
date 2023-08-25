@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class ScreenWidget extends StatelessWidget {
   final String title;
@@ -13,11 +14,20 @@ class ScreenWidget extends StatelessWidget {
         appBar: AppBar(
             title: Text(title),
             bottom: bottom,
-            leading: IconButton(
-              icon: const Icon(Icons.menu_rounded),
-              onPressed: () {
-                Scaffold.of(context).openDrawer();
-              },
+            leading: Visibility(
+              visible: context.canPop(),
+              replacement: IconButton(
+                icon: const Icon(Icons.menu_rounded),
+                onPressed: () {
+                  Scaffold.of(context).openDrawer();
+                },
+              ),
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back_rounded),
+                onPressed: () {
+                  context.pop();
+                },
+              ),
             )),
         body:
             Flex(direction: Axis.vertical, children: [Expanded(child: child)]));
