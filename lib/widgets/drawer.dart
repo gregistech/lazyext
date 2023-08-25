@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_profile_picture/flutter_profile_picture.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lazyext/google/google.dart';
+import 'package:lazyext/preferences.dart';
 import 'package:provider/provider.dart';
 
 class MainDrawer extends StatelessWidget {
@@ -9,6 +10,7 @@ class MainDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    dynamic prefs = Preferences();
     return Drawer(
         child: ListView(
       padding: EdgeInsets.zero,
@@ -17,49 +19,56 @@ class MainDrawer extends StatelessWidget {
           height: 250,
           child: Consumer<Google>(
             builder: (BuildContext context, Google google, _) => DrawerHeader(
-                child: Visibility(
-              visible: google.account != null,
-              replacement: Center(
-                  child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text("Not logged in"),
-                  TextButton(
-                      onPressed: () async {
-                        await google.signIn();
-                      },
-                      child: const Text("Sign in"))
-                ],
-              )),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ProfilePicture(
-                          name: google.account?.displayName ?? "Anonymous",
-                          img: google.account?.photoUrl,
-                          radius: 31,
-                          fontsize: 21,
-                        ),
-                        Column(
-                          mainAxisAlignment: MainAxisAlignment.start,
+                child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                FutureBuilder<dynamic>(
+                    future: prefs.name,
+                    builder: (BuildContext context,
+                        AsyncSnapshot<dynamic> nameSnapshot) {
+                      return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(google.account?.displayName ?? "Anonymous"),
-                            Text(google.account?.email ?? "Not logged in"),
-                          ],
-                        ),
-                      ]),
-                  TextButton(
-                      onPressed: () async {
-                        google.logOut();
-                      },
-                      child: const Text("Log out")),
-                ],
-              ),
+                            FutureBuilder<dynamic>(
+                                future: prefs.photo,
+                                builder: (BuildContext context,
+                                    AsyncSnapshot<dynamic> photoSnapshot) {
+                                  return ProfilePicture(
+                                    name: google.account?.displayName ??
+                                        nameSnapshot.data ??
+                                        "Anonymous",
+                                    img: google.account?.photoUrl ??
+                                        photoSnapshot.data,
+                                    radius: 31,
+                                    fontsize: 21,
+                                  );
+                                }),
+                            Column(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(google.account?.displayName ??
+                                    nameSnapshot.data ??
+                                    "Anonymous"),
+                                FutureBuilder<dynamic>(
+                                    future: prefs.email,
+                                    builder: (BuildContext context,
+                                        AsyncSnapshot<dynamic> emailSnapshot) {
+                                      return Text(google.account?.email ??
+                                          emailSnapshot.data ??
+                                          "Not logged in");
+                                    }),
+                              ],
+                            ),
+                          ]);
+                    }),
+                TextButton(
+                    onPressed: () async {
+                      google.logOut();
+                    },
+                    child: const Text("Log out")),
+              ],
             )),
           ),
         ),

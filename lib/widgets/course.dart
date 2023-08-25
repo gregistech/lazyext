@@ -22,7 +22,9 @@ class CourseListItem extends StatelessWidget {
             onTap: () => context.push("/courses/assignments", extra: course),
             leading: ProfilePicture(
               name: teacher?.profile?.name?.fullName ?? "Anonymous",
-              img: "https:${teacher?.profile?.photoUrl}",
+              img: teacher?.profile?.photoUrl == null
+                  ? null
+                  : "https:${teacher?.profile?.photoUrl}",
               radius: 21,
               fontsize: 17,
             ),

@@ -39,8 +39,7 @@ class GoogleApi<A> {
     try {
       return await request();
     } on AccessDeniedException {
-      dynamic prefs = Preferences();
-      prefs.googleToken = null;
+      _google.invalidateStoredAccount();
       await _google.signIn();
       return await request();
     }
@@ -66,27 +65,36 @@ class Google extends ChangeNotifier {
   late final GoogleSignIn _api = GoogleSignIn(scopes: _scopes);
   List<String> _scopes = [];
   GoogleSignInAccount? _account;
-  GoogleSignInAccount? get account {
-    return _account;
-  }
+  GoogleSignInAccount? get account => _account;
 
   set account(GoogleSignInAccount? account) {
     _account = account;
     dynamic prefs = Preferences();
     account?.authentication.then((GoogleSignInAuthentication auth) =>
         prefs.googleToken = auth.accessToken);
+    prefs.name = account?.displayName;
+    prefs.email = account?.email;
+    prefs.photo = account?.photoUrl;
+    notifyListeners();
+  }
+
+  void invalidateStoredAccount() {
+    dynamic prefs = Preferences();
+    prefs.googleToken = null;
+    prefs.name = null;
+    prefs.email = null;
+    prefs.photo = null;
+    account = null;
   }
 
   Future<void> signIn() async {
-    account ??= await _api.signInSilently();
+    account = await _api.signInSilently();
     account ??= await _api.signIn();
-    notifyListeners();
   }
 
   Future<void> logOut() async {
     await _api.disconnect();
     account = null;
-    notifyListeners();
   }
 
   Future<bool> requestScopes(List<String> scopes) async {
@@ -106,10 +114,6 @@ class Google extends ChangeNotifier {
     }
   }
 
-  void onUserChange(Function(GoogleSignInAccount?) callback) {
-    _api.onCurrentUserChanged.listen(callback);
-  }
-
   Future<AuthClient?> _loadStoredAuthenticatedClient() async {
     dynamic prefs = Preferences();
     String? token = await prefs.googleToken;
@@ -123,7 +127,6 @@ class Google extends ChangeNotifier {
         null,
         _scopes,
       );
-
       return gapis.authenticatedClient(Client(), credentials);
     } else {
       return null;
