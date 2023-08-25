@@ -39,7 +39,7 @@ class GoogleApi<A> {
     try {
       return await request();
     } on AccessDeniedException {
-      _google.invalidateStoredAccount();
+      await _google.invalidateStoredAccount();
       await _google.signIn();
       return await request();
     }
@@ -78,13 +78,13 @@ class Google extends ChangeNotifier {
     notifyListeners();
   }
 
-  void invalidateStoredAccount() {
+  Future<void> invalidateStoredAccount() async {
     dynamic prefs = Preferences();
     prefs.googleToken = null;
     prefs.name = null;
     prefs.email = null;
     prefs.photo = null;
-    account = null;
+    await logOut();
   }
 
   Future<void> signIn() async {
