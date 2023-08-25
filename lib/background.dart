@@ -49,14 +49,12 @@ class ClassroomPDFBackgroundService {
     BackgroundFetch.finish(taskId);
   }
 
-  static Future<void> checkForNewAssignment() async {
-    Google google = Google();
-    Classroom classroom = Classroom(google);
+  static Future<List<Course>?> getMonitoredCourses(
+      dynamic prefs, Classroom classroom) async {
     List<Course> courses = await classroom.getAll(classroom.getCourses);
-    dynamic prefs = Preferences();
     List<String>? monitored = ((await prefs.monitor) as String?)?.split(",");
     if (monitored != null) {
-      courses = courses.where((Course element) {
+      return courses.where((Course element) {
         for (String id in monitored) {
           if (id == element.id) {
             return true;
@@ -64,66 +62,103 @@ class ClassroomPDFBackgroundService {
         }
         return false;
       }).toList();
-      for (Course course in courses) {
-        List<Announcement> announcements;
-        List<CourseWork> courseWork;
-        if (await prefs.lastAssignment == null) {
-          announcements =
-              (await classroom.getAnnouncements(course, pageSize: 1)).$1;
-          courseWork = (await classroom.getCourseWork(course, pageSize: 1)).$1;
-        } else {
-          announcements = await classroom.getAll((
-                  {int pageSize = 20, String? token}) async =>
-              classroom.getAnnouncements(course,
-                  pageSize: pageSize,
-                  token: token,
-                  cutoffDate: (await prefs.lastAssignment)));
-          courseWork = await classroom.getAll((
-                  {int pageSize = 20, String? token}) async =>
-              classroom.getCourseWork(course,
-                  pageSize: pageSize,
-                  token: token,
-                  cutoffDate: (await prefs.lastAssignment)));
-        }
-        List<Assignment> assignments = [];
-        for (Announcement announcement in announcements) {
-          assignments.add(Assignment.fromAnnouncement(announcement));
-        }
-        for (CourseWork elem in courseWork) {
-          assignments.add(Assignment.fromCourseWork(elem));
-        }
-        prefs.lastAssignment = DateTime.now().toIso8601String();
+    }
+    return null;
+  }
 
-        for (Assignment assignment in assignments) {
-          List<Exercise> exercises = [];
-          Drive driveApi = Drive(google);
-          ExerciseExtractor extractor = ExerciseExtractor();
-          for (Material material in assignment.materials) {
-            DriveFile? driveFile = material.driveFile?.driveFile;
-            if (driveFile != null) {
-              drive.File? file = await driveApi.driveFileToFile(driveFile);
-              if (file != null) {
-                drive.File? gdoc = await driveApi.fileToGoogleDoc(file);
-                if (gdoc != null) {
-                  drive.Media? pdf = await driveApi.fileToPdf(gdoc);
-                  if (pdf != null) {
-                    String? path = await driveApi.downloadMedia(pdf,
-                        "${(await getTemporaryDirectory()).path}/${const Uuid().v4()}.pdf");
-                    if (path != null) {
-                      File file = File(path);
-                      exercises.addAll(
-                          (await extractor.getExerciseCollection(file)).$2);
-                    }
-                  }
-                }
+  static List<Assignment> combineIntoAssignments(
+      List<CourseWork> courseWork, List<Announcement> announcements) {
+    List<Assignment> assignments = [];
+    for (Announcement announcement in announcements) {
+      assignments.add(Assignment.fromAnnouncement(announcement));
+    }
+    for (CourseWork elem in courseWork) {
+      assignments.add(Assignment.fromCourseWork(elem));
+    }
+    return assignments;
+  }
+
+  static Future<List<Assignment>> getNewestAssignments(
+      Classroom classroom, Course course) async {
+    List<Announcement> announcements =
+        (await classroom.getAnnouncements(course, pageSize: 1)).$1;
+    List<CourseWork> courseWork =
+        (await classroom.getCourseWork(course, pageSize: 1)).$1;
+    return combineIntoAssignments(courseWork, announcements);
+  }
+
+  static Future<List<Assignment>> getCutOffynamicAssignments(
+      Classroom classroom, Course course, String cutoffDate) async {
+    List<Announcement> announcements = await classroom.getAll((
+            {int pageSize = 20, String? token}) async =>
+        classroom.getAnnouncements(course,
+            pageSize: pageSize, token: token, cutoffDate: cutoffDate));
+    List<CourseWork> courseWork = await classroom.getAll((
+            {int pageSize = 20, String? token}) async =>
+        classroom.getCourseWork(course,
+            pageSize: pageSize, token: token, cutoffDate: cutoffDate));
+    return combineIntoAssignments(courseWork, announcements);
+  }
+
+  static Future<List<Assignment>> getTargetAssignments(
+      dynamic prefs, Classroom classroom, Course course) async {
+    if (await prefs.lastAssignment == null) {
+      return getNewestAssignments(classroom, course);
+    } else {
+      return getCutOffynamicAssignments(
+          classroom, course, await prefs.lastAssignment);
+    }
+  }
+
+  static Future<List<Exercise>?> assignmentToExercises(
+      Drive driveApi, Assignment assignment) async {
+    ExerciseExtractor extractor = ExerciseExtractor();
+    for (Material material in assignment.materials) {
+      DriveFile? driveFile = material.driveFile?.driveFile;
+      if (driveFile != null) {
+        drive.File? file = await driveApi.driveFileToFile(driveFile);
+        if (file != null) {
+          drive.File? gdoc = await driveApi.fileToGoogleDoc(file);
+          if (gdoc != null) {
+            drive.Media? pdf = await driveApi.fileToPdf(gdoc);
+            if (pdf != null) {
+              String? path = await driveApi.downloadMedia(pdf,
+                  "${(await getTemporaryDirectory()).path}/${const Uuid().v4()}.pdf");
+              if (path != null) {
+                File file = File(path);
+                return (await extractor.getExerciseCollection(file)).$2;
               }
             }
           }
+        }
+      }
+    }
+    return null;
+  }
+
+  static Future<void> checkForNewAssignment() async {
+    Google google = Google();
+    Classroom classroom = Classroom(google);
+    Drive driveApi = Drive(google);
+    dynamic prefs = Preferences();
+
+    List<Course>? courses = await getMonitoredCourses(prefs, classroom);
+    if (courses != null) {
+      for (Course course in courses) {
+        List<Assignment> assignments =
+            await getTargetAssignments(prefs, classroom, course);
+        prefs.lastAssignment = DateTime.now().toIso8601String();
+
+        for (Assignment assignment in assignments) {
           Merger merger = PracticeMerger();
-          PDFDocument pdf = await merger.exercisesToPDFDocument(exercises);
-          Storage? storage = await AndroidFileStorage().storage;
-          await storage
-              ?.savePDF([course.name ?? "unknown", assignment.name], pdf);
+          List<Exercise>? exercises =
+              await assignmentToExercises(driveApi, assignment);
+          if (exercises != null) {
+            PDFDocument pdf = await merger.exercisesToPDFDocument(exercises);
+            Storage? storage = await AndroidFileStorage().storage;
+            await storage
+                ?.savePDF([course.name ?? "unknown", assignment.name], pdf);
+          }
         }
       }
     }
