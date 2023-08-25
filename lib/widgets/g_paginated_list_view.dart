@@ -30,7 +30,7 @@ class _GPaginatedListViewState<T, R> extends State<GPaginatedListView<T, R>> {
     (List<R>, T?) page = await widget.getPage(widget.pageSize, token);
     try {
       _pagingController.appendPage(page.$1, page.$2);
-    } on FlutterError {
+    } on Exception {
       // Could be scheduled after dispose, which causes a crash.
       return;
     }
