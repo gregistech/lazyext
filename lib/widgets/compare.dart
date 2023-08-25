@@ -1,7 +1,8 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
-import 'package:lazyext/android_file_storage.dart';
+
+import 'package:lazyext/app/android_file_storage.dart';
 
 import '../pdf/storage.dart';
 import 'packagE:image/image.dart' as img;

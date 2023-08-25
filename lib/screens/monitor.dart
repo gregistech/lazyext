@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:googleapis/classroom/v1.dart';
+import 'package:lazyext/app/preferences.dart';
 import 'package:lazyext/google/classroom.dart';
-import 'package:lazyext/preferences.dart';
 import 'package:lazyext/widgets/g_paginated_list_view.dart';
 import 'package:provider/provider.dart';
 

@@ -1,6 +1,6 @@
 import 'package:file_picker/file_picker.dart';
+import 'package:lazyext/app/preferences.dart';
 import 'package:lazyext/pdf/storage.dart';
-import 'package:lazyext/preferences.dart';
 
 class AndroidFileStorage {
   dynamic prefs = Preferences();

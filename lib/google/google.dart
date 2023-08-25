@@ -4,7 +4,7 @@ import 'package:extension_google_sign_in_as_googleapis_auth/extension_google_sig
 import 'package:googleapis_auth/googleapis_auth.dart';
 import 'package:http/http.dart';
 import 'package:googleapis_auth/googleapis_auth.dart' as gapis;
-import 'package:lazyext/preferences.dart';
+import 'package:lazyext/app/preferences.dart';
 
 // See https://github.com/dart-lang/sdk/issues/30074, come on...
 typedef ApiCreator<A> = A Function(Client);

@@ -1,7 +1,9 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lazyext/preferences.dart';
+import 'package:lazyext/app/preferences.dart';
+import 'package:lazyext/app/theme.dart';
+import 'package:provider/provider.dart';
 
 import 'screen.dart';
 
@@ -14,24 +16,25 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   dynamic prefs = Preferences();
+
   @override
   Widget build(BuildContext context) {
     return ScreenWidget(
       title: "Settings",
       child: ListView(children: [
-        FutureBuilder<dynamic>(
-            future: prefs.theme,
-            builder: (context, snapshot) {
-              return SwitchListTile(
-                  secondary: const Icon(Icons.dark_mode_rounded),
-                  title: const Text("Dark theme"),
-                  value: (snapshot.data ?? "dark") == "dark",
-                  onChanged: (bool value) {
-                    setState(() {
-                      prefs.theme = value ? "dark" : "light";
+        Consumer<ThemeProvider>(builder: (context, theme, _) {
+          return FutureBuilder<dynamic>(
+              future: theme.dark,
+              builder: (context, snapshot) {
+                return SwitchListTile(
+                    secondary: const Icon(Icons.dark_mode_rounded),
+                    title: const Text("Dark theme"),
+                    value: snapshot.data ?? true,
+                    onChanged: (bool value) {
+                      theme.dark = Future.value(value);
                     });
-                  });
-            }),
+              });
+        }),
         ListTile(
           leading: const Icon(Icons.storage_rounded),
           title: const Text("Storage root"),

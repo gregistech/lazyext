@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_profile_picture/flutter_profile_picture.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lazyext/app/preferences.dart';
 import 'package:lazyext/google/google.dart';
-import 'package:lazyext/preferences.dart';
 import 'package:provider/provider.dart';
 
 class MainDrawer extends StatelessWidget {
