@@ -15,62 +15,51 @@ class MainDrawer extends StatelessWidget {
         child: ListView(
       padding: EdgeInsets.zero,
       children: [
-        SizedBox(
-          height: 250,
-          child: Consumer<Google>(
-            builder: (BuildContext context, Google google, _) => DrawerHeader(
-                child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                FutureBuilder<dynamic>(
-                    future: prefs.name,
-                    builder: (BuildContext context,
-                        AsyncSnapshot<dynamic> nameSnapshot) {
-                      return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            FutureBuilder<dynamic>(
-                                future: prefs.photo,
-                                builder: (BuildContext context,
-                                    AsyncSnapshot<dynamic> photoSnapshot) {
-                                  return ProfilePicture(
-                                    name: google.account?.displayName ??
-                                        nameSnapshot.data ??
-                                        "Anonymous",
-                                    img: google.account?.photoUrl ??
-                                        photoSnapshot.data,
-                                    radius: 31,
-                                    fontsize: 21,
-                                  );
-                                }),
-                            Column(
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(google.account?.displayName ??
-                                    nameSnapshot.data ??
-                                    "Anonymous"),
-                                FutureBuilder<dynamic>(
-                                    future: prefs.email,
-                                    builder: (BuildContext context,
-                                        AsyncSnapshot<dynamic> emailSnapshot) {
-                                      return Text(google.account?.email ??
-                                          emailSnapshot.data ??
-                                          "Not logged in");
-                                    }),
-                              ],
-                            ),
-                          ]);
-                    }),
-                TextButton(
-                    onPressed: () async {
-                      google.logOut();
-                    },
-                    child: const Text("Log out")),
-              ],
-            )),
-          ),
+        Consumer<Google>(
+          builder: (BuildContext context, Google google, _) => DrawerHeader(
+              child: Column(
+            children: [
+              FutureBuilder<dynamic>(
+                  future: prefs.name,
+                  builder: (BuildContext context,
+                      AsyncSnapshot<dynamic> nameSnapshot) {
+                    return FutureBuilder<dynamic>(
+                        future: prefs.email,
+                        builder: (BuildContext context,
+                            AsyncSnapshot<dynamic> emailSnapshot) {
+                          return ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: FutureBuilder<dynamic>(
+                                  future: prefs.photo,
+                                  builder: (BuildContext context,
+                                      AsyncSnapshot<dynamic> photoSnapshot) {
+                                    return ProfilePicture(
+                                      name: google.account?.displayName ??
+                                          nameSnapshot.data ??
+                                          "Anonymous",
+                                      img: google.account?.photoUrl ??
+                                          photoSnapshot.data,
+                                      radius: 21,
+                                      fontsize: 21,
+                                    );
+                                  }),
+                              title: Text(google.account?.displayName ??
+                                  nameSnapshot.data ??
+                                  "Anonymous"),
+                              subtitle: Text(google.account?.email ??
+                                  emailSnapshot.data ??
+                                  "Not logged in"));
+                        });
+                  }),
+              ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  onTap: () async {
+                    google.logOut();
+                  },
+                  leading: const Icon(Icons.logout_rounded),
+                  title: const Text("Log out")),
+            ],
+          )),
         ),
         ListTile(
           leading: const Icon(Icons.class_rounded),
