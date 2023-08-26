@@ -94,7 +94,9 @@ class _MainWidgetState extends State<MainWidget> {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider<Google>(
-          create: (_) => Google(),
+          create: (_) => Google(
+              clientId:
+                  "374861372817-d8k9ua17m0lucd21og4a90o2qb1jl2cn.apps.googleusercontent.com"),
         ),
         ListenableProxyProvider<Google, Classroom>(
             update: (_, google, __) => Classroom(google)),

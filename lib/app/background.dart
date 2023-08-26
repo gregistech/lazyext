@@ -137,7 +137,9 @@ class ClassroomPDFBackgroundService {
   }
 
   static Future<void> checkForNewAssignment() async {
-    Google google = Google();
+    Google google = Google(
+        clientId:
+            "374861372817-d8k9ua17m0lucd21og4a90o2qb1jl2cn.apps.googleusercontent.com");
     Classroom classroom = Classroom(google);
     Drive driveApi = Drive(google);
     dynamic prefs = Preferences();
