@@ -41,9 +41,10 @@ class CoursesListView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GPaginatedListView<String?, Course>(
-        getPage: (pageSize, token) =>
-            Provider.of<Classroom>(context, listen: false)
-                .getCourses(token: token),
+        getPage: (pageSize, token) async =>
+            (await Provider.of<Classroom>(context, listen: false)
+                    .getCourses(token: token) ??
+                (<Course>[], null)),
         itemBuilder: (BuildContext context, Course item, int index) =>
             CourseListItem(course: item));
   }

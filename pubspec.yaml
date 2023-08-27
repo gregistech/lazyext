@@ -70,6 +70,7 @@ dependencies:
   flutter_profile_picture: ^2.0.0
   intl: ^0.18.1
   dynamic_color: ^1.6.6
+  mutex: ^3.0.1
 
 dev_dependencies:
   flutter_test:

@@ -81,9 +81,9 @@ class ClassroomPDFBackgroundService {
   static Future<List<Assignment>> getNewestAssignments(
       Classroom classroom, Course course) async {
     List<Announcement> announcements =
-        (await classroom.getAnnouncements(course, pageSize: 1)).$1;
+        (await classroom.getAnnouncements(course, pageSize: 1))?.$1 ?? [];
     List<CourseWork> courseWork =
-        (await classroom.getCourseWork(course, pageSize: 1)).$1;
+        (await classroom.getCourseWork(course, pageSize: 1))?.$1 ?? [];
     return combineIntoAssignments(courseWork, announcements);
   }
 

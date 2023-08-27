@@ -205,14 +205,14 @@ class _AssignmentListViewState extends State<AssignmentListView> {
     return GPaginatedListView<(String?, String?), Assignment>(
         getPage: (int pageSize, (String?, String?)? token) async {
           int sizeCourseWork = (pageSize / 2).ceil();
-          Future<(List<Announcement>, String?)>? announcementJob =
+          Future<(List<Announcement>, String?)?>? announcementJob =
               reachedLast[0]
                   ? null
                   : Provider.of<Classroom>(context, listen: false)
                       .getAnnouncements(widget.course,
                           pageSize: pageSize - sizeCourseWork,
                           token: token?.$1);
-          Future<(List<CourseWork>, String?)>? courseWorkJob = reachedLast[1]
+          Future<(List<CourseWork>, String?)?>? courseWorkJob = reachedLast[1]
               ? null
               : Provider.of<Classroom>(context, listen: false).getCourseWork(
                   widget.course,

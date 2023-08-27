@@ -19,7 +19,8 @@ class Drive extends GoogleApi<DriveApi> with ChangeNotifier {
   Future<File?> fileToGoogleDoc(File file) async {
     String? id = file.id;
     if (id != null) {
-      return await getResponse(() => api?.files
+      return await getResponse(() async => (await api)
+          ?.files
           .copy(File(mimeType: "application/vnd.google-apps.document"), id));
     } else {
       return null;
@@ -29,7 +30,8 @@ class Drive extends GoogleApi<DriveApi> with ChangeNotifier {
   Future<Media?> fileToPdf(File file) async {
     String? id = file.id;
     if (id != null) {
-      return await getResponse(() => api?.files.export(id, "application/pdf",
+      return await getResponse(() async => (await api)?.files.export(
+          id, "application/pdf",
           downloadOptions: DownloadOptions.fullMedia));
     } else {
       return null;
@@ -46,7 +48,7 @@ class Drive extends GoogleApi<DriveApi> with ChangeNotifier {
     return await getResponse(() async {
       String? id = driveFile.id;
       if (id != null) {
-        return (await api?.files.get(id)) as File?;
+        return (await (await api)?.files.get(id)) as File?;
       } else {
         return null;
       }

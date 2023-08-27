@@ -22,9 +22,10 @@ class _MonitorScreenState extends State<MonitorScreen> {
     return ScreenWidget(
       title: "Courses to fetch",
       child: GPaginatedListView<String?, Course>(
-          getPage: (pageSize, token) =>
-              Provider.of<Classroom>(context, listen: false)
-                  .getCourses(token: token),
+          getPage: (pageSize, token) async =>
+              (await Provider.of<Classroom>(context, listen: false)
+                      .getCourses(token: token) ??
+                  (<Course>[], null)),
           itemBuilder: (BuildContext context, Course course, int index) =>
               FutureBuilder(
                   future: prefs.monitor,
