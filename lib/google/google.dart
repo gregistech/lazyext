@@ -62,7 +62,6 @@ class Google extends ChangeNotifier {
   final String clientId;
   Google({required this.clientId});
 
-  final credentialsStorage = AccessCredentialsStorage();
   final _userCredentialsSource = UserCredentialsSource();
 
   GoogleSignInAccount? get account => _userCredentialsSource.account;
