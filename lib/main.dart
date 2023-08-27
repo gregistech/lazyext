@@ -3,6 +3,7 @@ import 'package:flutter/material.dart' hide Material;
 import 'package:googleapis/classroom/v1.dart' hide Assignment;
 import 'package:lazyext/app/background.dart';
 import 'package:lazyext/app/theme.dart';
+import 'package:lazyext/google/cached_teacher.dart';
 import 'package:lazyext/screens/monitor.dart';
 import 'package:lazyext/screens/settings.dart';
 import 'package:lazyext/widgets/assignment.dart';
@@ -100,6 +101,8 @@ class _MainWidgetState extends State<MainWidget> {
         ),
         ListenableProxyProvider<Google, Classroom>(
             update: (_, google, __) => Classroom(google)),
+        ListenableProxyProvider<Classroom, CachedTeacherProvider>(
+            update: (_, classroom, __) => CachedTeacherProvider(classroom)),
         ListenableProxyProvider<Google, Drive>(
             update: (_, google, __) => Drive(google)),
         ChangeNotifierProvider<ThemeProvider>(create: (_) => ThemeProvider())

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_profile_picture/flutter_profile_picture.dart';
 import 'package:go_router/go_router.dart';
 import 'package:googleapis/classroom/v1.dart';
+import 'package:lazyext/google/cached_teacher.dart';
+import 'package:lazyext/widgets/cached_teacher_pfp.dart';
 import 'package:lazyext/widgets/g_paginated_list_view.dart';
 import 'package:provider/provider.dart';
 
@@ -13,23 +14,17 @@ class CourseListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<Teacher?>(
-        future: Provider.of<Classroom>(context, listen: false)
+    return FutureBuilder<CachedTeacher?>(
+        future: Provider.of<CachedTeacherProvider>(context, listen: false)
             .getTeacher(course.id ?? "", course.ownerId ?? ""),
-        builder: (BuildContext context, AsyncSnapshot<Teacher?> snapshot) {
-          Teacher? teacher = snapshot.data;
+        builder:
+            (BuildContext context, AsyncSnapshot<CachedTeacher?> snapshot) {
+          CachedTeacher? teacher = snapshot.data;
           return ListTile(
             onTap: () => context.push("/courses/assignments", extra: course),
-            leading: ProfilePicture(
-              name: teacher?.profile?.name?.fullName ?? "Anonymous",
-              img: teacher?.profile?.photoUrl == null
-                  ? null
-                  : "https:${teacher?.profile?.photoUrl}",
-              radius: 21,
-              fontsize: 17,
-            ),
+            leading: CachedTeacherProfilePicture(teacher: teacher),
             title: Text(course.name ?? "UNKNOWN"),
-            subtitle: Text(teacher?.profile?.name?.fullName ?? ""),
+            subtitle: Text(teacher?.name ?? ""),
           );
         });
   }

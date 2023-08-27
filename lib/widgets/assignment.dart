@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart' hide Material;
-import 'package:flutter_profile_picture/flutter_profile_picture.dart';
 import 'package:go_router/go_router.dart';
 import 'package:googleapis/classroom/v1.dart';
 import 'package:googleapis/drive/v3.dart' hide Drive;
 import 'package:intl/intl.dart';
+import 'package:lazyext/google/cached_teacher.dart';
+import 'package:lazyext/widgets/cached_teacher_pfp.dart';
 import 'package:provider/provider.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -56,23 +57,16 @@ class AssignmentListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<Teacher?>(
-        future: Provider.of<Classroom>(context, listen: false)
+    return FutureBuilder<CachedTeacher?>(
+        future: Provider.of<CachedTeacherProvider>(context, listen: false)
             .getTeacher(course.id ?? "", assignment.creatorId),
         builder: (context, snapshot) {
-          Teacher? teacher = snapshot.data;
+          CachedTeacher? teacher = snapshot.data;
           return ListTile(
-            leading: ProfilePicture(
-              name: teacher?.profile?.name?.fullName ?? "",
-              img: teacher?.profile?.photoUrl == null
-                  ? null
-                  : "https:${teacher?.profile?.photoUrl}",
-              radius: 21,
-              fontsize: 21,
-            ),
+            leading: CachedTeacherProfilePicture(teacher: teacher),
             title: Text(assignment.name.trim()),
             subtitle: Text(
-                "${DateFormat.yMMMMEEEEd().format(assignment.creationTime)}${teacher?.profile?.name?.fullName == null ? '' : '\n${teacher?.profile?.name?.fullName}'}"),
+                "${DateFormat.yMMMMEEEEd().format(assignment.creationTime)}${teacher?.name == null ? '' : '\n${teacher?.name}'}"),
             trailing: Text(assignment.materials.length.toString()),
             onTap: () {
               context.push("/courses/assignments/assignment",
@@ -154,24 +148,19 @@ class _AssignmentViewState extends State<AssignmentView> {
     }
     return Column(
       children: [
-        FutureBuilder<Teacher?>(
-            future: Provider.of<Classroom>(context, listen: false).getTeacher(
-                widget.course.id ?? "", widget.assignment.creatorId),
-            builder: (BuildContext context, AsyncSnapshot<Teacher?> snapshot) {
-              Teacher? teacher = snapshot.data;
+        FutureBuilder<CachedTeacher?>(
+            future: Provider.of<CachedTeacherProvider>(context, listen: false)
+                .getTeacher(
+                    widget.course.id ?? "", widget.assignment.creatorId),
+            builder:
+                (BuildContext context, AsyncSnapshot<CachedTeacher?> snapshot) {
+              CachedTeacher? teacher = snapshot.data;
               return ListTile(
                 isThreeLine: true,
-                leading: ProfilePicture(
-                  name: teacher?.profile?.name?.fullName ?? "",
-                  img: teacher?.profile?.photoUrl == null
-                      ? null
-                      : "https:${teacher?.profile?.photoUrl}",
-                  radius: 21,
-                  fontsize: 21,
-                ),
+                leading: CachedTeacherProfilePicture(teacher: teacher),
                 title: Text(widget.assignment.name.trim()),
                 subtitle: Text(
-                  "${teacher?.profile?.name?.fullName == null ? "" : "- ${teacher?.profile?.name?.fullName}"}${widget.assignment.text.isEmpty ? "" : '\n\n${widget.assignment.text}'}",
+                  "${teacher?.name == null ? "" : "- ${teacher?.name}"}${widget.assignment.text.isEmpty ? "" : '\n\n${widget.assignment.text}'}",
                 ),
               );
             }),

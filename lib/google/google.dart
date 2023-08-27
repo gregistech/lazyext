@@ -34,7 +34,11 @@ class GoogleApi<A> {
   }
 
   Future<R?> getResponse<R>(Future<R?>? Function() request) async {
-    return request();
+    try {
+      return request();
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<List<R>> getAll<R>(
@@ -69,8 +73,8 @@ class Google extends ChangeNotifier {
 
   Future<void> logOut() => _userCredentialsSource.logOut();
 
-  Future<bool> addScopes(List<String> scopes) {
-    return _userCredentialsSource.requestScopes(scopes);
+  void addScopes(List<String> scopes) {
+    _userCredentialsSource.scopes += scopes;
   }
 }
 
@@ -180,6 +184,11 @@ class UserCredentialsSource implements AccessCredentialsSource {
       GoogleSignIn(forceCodeForRefreshToken: true);
   GoogleSignInAccount? get account => _googleSignIn.currentUser;
 
+  UserCredentialsSource() {
+    _googleSignIn.onCurrentUserChanged.listen((event) =>
+        _googleLock.protect(() => _googleSignIn.requestScopes(scopes)));
+  }
+
   @override
   Future<AccessCredentials?> get credentials async {
     return _googleLock.protect<AccessCredentials?>(() async {
@@ -194,9 +203,7 @@ class UserCredentialsSource implements AccessCredentialsSource {
     await _googleLock.protect(() => _googleSignIn.disconnect());
   }
 
-  Future<bool> requestScopes(List<String> scopes) async {
-    return await _googleLock.protect(() => _googleSignIn.requestScopes(scopes));
-  }
+  List<String> scopes = [];
 }
 
 abstract class AccessCredentialsSource {
