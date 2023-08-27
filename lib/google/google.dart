@@ -126,7 +126,7 @@ class AccessCredentialsStorage implements AccessCredentialsSource {
     wrapper.then((credentials) {
       if (credentials != null) {
         prefs.accessToken = credentials.accessToken.data;
-        prefs.accessType = credentials.accessToken.type;
+        prefs.accessTokenType = credentials.accessToken.type;
         prefs.expiryToken = credentials.accessToken.expiry.toIso8601String();
         prefs.idToken = credentials.idToken;
         prefs.scopesToken = credentials.scopes.join(",");
@@ -139,10 +139,12 @@ class AccessCredentialsStorage implements AccessCredentialsSource {
 
   void invalidate() {
     prefs.accessToken = null;
-    prefs.accessType = null;
+    prefs.accessTokenType = null;
     prefs.expiryToken = null;
     prefs.idToken = null;
     prefs.refreshToken = null;
+    prefs.expiryToken = null;
+    prefs.scopesToken = null;
   }
 
   @override
