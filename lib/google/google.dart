@@ -19,26 +19,53 @@ class GoogleApi<A> {
 
   final Google _google;
   final ApiCreator<A> _apiCreator;
-  Client? client;
   Future<A?> get api async {
-    client ??= await _google.client;
-    Client? current = client;
-    if (current != null) {
-      return _apiCreator(current);
+    Client? client = await _google.client;
+    if (client != null) {
+      return _apiCreator(client);
     }
     return null;
   }
 
-  GoogleApi(this._google, this._apiCreator) {
+  int pageSize;
+
+  GoogleApi(this._google, this._apiCreator, {this.pageSize = 20}) {
     _google.addScopes(scopes);
   }
 
-  Future<R?> getResponse<R>(Future<R?>? Function() request) async {
+  Future<R?>? getResponse<R>(Future<R?>? Function(A api) request) async {
     try {
-      return request();
-    } catch (_) {
-      return null;
+      A? current = await api;
+      if (current != null) {
+        return await request(current);
+      }
+    } on AccessDeniedException catch (e) {
+      if (e.message.contains("invalid_token")) {
+        await _google.refreshCredentials();
+        return await getResponse(request);
+      } else if (e.message.contains("insufficient_scope")) {
+        if (await _google.requestScopes()) {
+          return await getResponse(request);
+        } else {
+          rethrow;
+        }
+      } else {
+        rethrow;
+      }
     }
+    return null;
+  }
+
+  Future<R?> list<R>(dynamic Function(A api) request,
+      {List<dynamic>? positional,
+      Map<Symbol, dynamic>? additional,
+      String? pageToken}) async {
+    Map<Symbol, dynamic> named = {};
+    named[const Symbol("pageToken")] = pageToken;
+    named[const Symbol("pageSize")] = pageToken;
+    if (additional != null) named.addAll(additional);
+    return getResponse(
+        (A api) => Function.apply(request(api), positional, named));
   }
 
   Future<List<R>> getAll<R>(
@@ -50,8 +77,7 @@ class GoogleApi<A> {
     (List<R>, String?)? result;
     do {
       lastToken = result?.$2;
-      result = await getResponse(
-          () => request(token: lastToken, pageSize: pageSize));
+      result = await request(token: lastToken, pageSize: pageSize);
       elems.addAll(result?.$1 ?? []);
     } while (result?.$2 != lastToken || result?.$1.length == pageSize);
     return elems;
@@ -60,17 +86,48 @@ class GoogleApi<A> {
 
 class Google extends ChangeNotifier {
   final String clientId;
-  Google({required this.clientId});
+  final String clientSecret;
+
+  Google({required this.clientId, required this.clientSecret});
 
   final _userCredentialsSource = UserCredentialsSource();
 
   GoogleSignInAccount? get account => _userCredentialsSource.account;
 
-  late final _googleClient = OfflineGoogleClient(clientId,
+  late final _googleClient = OfflineGoogleClient(
+      ClientId(clientId, clientSecret),
       additionalSources: [_userCredentialsSource]);
   Future<Client?> get client => _googleClient.client;
 
-  Future<void> logOut() => _userCredentialsSource.logOut();
+  Future<void> logOut() async {
+    _googleClient._credentialsStorage.invalidate();
+    try {
+      await _userCredentialsSource.logOut();
+    } finally {
+      notifyListeners();
+    }
+  }
+
+  Future<void> refreshCredentials() async {
+    AccessCredentials? credentials = await _googleClient.credentials;
+    if (credentials != null) {
+      credentials = await _googleClient.refreshCredentials(credentials);
+      if (credentials == null) {
+        await logOut();
+      }
+    }
+  }
+
+  Future<bool> requestScopes() async {
+    AccessCredentials? credentials =
+        await _userCredentialsSource.requestScopes();
+    if (credentials != null) {
+      _googleClient._credentialsStorage.invalidate();
+      _googleClient._credentialsStorage.credentials = Future.value(credentials);
+      return true;
+    }
+    return false;
+  }
 
   void addScopes(List<String> scopes) {
     _userCredentialsSource.scopes += scopes;
@@ -83,27 +140,37 @@ class OfflineGoogleClient {
     _credentialsStorage,
   ];
 
-  final String clientId;
+  final ClientId clientId;
 
   OfflineGoogleClient(this.clientId,
       {List<AccessCredentialsSource> additionalSources = const []}) {
     _credentialSources.addAll(additionalSources);
   }
 
-  Future<Client?> get client async {
-    AccessCredentials? credentials;
+  Future<AccessCredentials?> get credentials async {
     for (AccessCredentialsSource source in _credentialSources) {
-      credentials = await source.credentials;
-      if (credentials != null) break;
+      AccessCredentials? current = await source.credentials;
+      if (current != null) {
+        return current;
+      }
     }
-    if (credentials == null) {
+    return null;
+  }
+
+  Future<Client?> get client async {
+    AccessCredentials? current = await credentials;
+    if (current == null) {
       return null;
     } else {
-      if (credentials.accessToken.hasExpired) {
-        credentials = await _refreshCredentials(credentials);
+      if (current.accessToken.hasExpired) {
+        current = await refreshCredentials(current);
+        if (current == null) {
+          _credentialsStorage.invalidate();
+          return null;
+        }
+        _credentialsStorage.credentials = Future.value(current);
       }
-      _credentialsStorage.credentials = Future.value(credentials);
-      return _credentialsToClient(credentials);
+      return _credentialsToClient(current);
     }
   }
 
@@ -111,10 +178,14 @@ class OfflineGoogleClient {
     return gapis.authenticatedClient(Client(), credentials);
   }
 
-  Future<AccessCredentials> _refreshCredentials(
+  Future<AccessCredentials?> refreshCredentials(
       AccessCredentials credentials) async {
-    return gapis.refreshCredentials(
-        ClientId(clientId), credentials, _credentialsToClient(credentials));
+    if (credentials.refreshToken == null) {
+      return null;
+    } else {
+      return gapis.refreshCredentials(
+          clientId, credentials, _credentialsToClient(credentials));
+    }
   }
 }
 
@@ -185,23 +256,38 @@ class UserCredentialsSource implements AccessCredentialsSource {
       GoogleSignIn(forceCodeForRefreshToken: true);
   GoogleSignInAccount? get account => _googleSignIn.currentUser;
 
-  UserCredentialsSource() {
-    _googleSignIn.onCurrentUserChanged.listen((event) =>
-        _googleLock.protect(() => _googleSignIn.requestScopes(scopes)));
+  Future<void> _signIn() async {
+    if (!await _googleSignIn.isSignedIn()) {
+      print("in2");
+      if (await _googleSignIn.signInSilently() == null) {
+        await _googleSignIn.signIn();
+      }
+    }
   }
 
   @override
   Future<AccessCredentials?> get credentials async {
     return _googleLock.protect<AccessCredentials?>(() async {
-      if (await _googleSignIn.signInSilently() == null) {
-        await _googleSignIn.signIn();
-      }
+      await _signIn();
+      print(
+          "asd: ${(await _googleSignIn.authenticatedClient())?.credentials.accessToken}");
       return (await _googleSignIn.authenticatedClient())?.credentials;
     });
   }
 
   Future<void> logOut() async {
     await _googleLock.protect(() => _googleSignIn.disconnect());
+  }
+
+  Future<AccessCredentials?> requestScopes() async {
+    return await _googleLock.protect(() async {
+      if (await _googleSignIn.isSignedIn()) {
+        if (await _googleSignIn.requestScopes(scopes)) {
+          return (await _googleSignIn.authenticatedClient())?.credentials;
+        }
+      }
+      return null;
+    });
   }
 
   List<String> scopes = [];

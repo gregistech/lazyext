@@ -97,7 +97,8 @@ class _MainWidgetState extends State<MainWidget> {
         ChangeNotifierProvider<Google>(
           create: (_) => Google(
               clientId:
-                  "374861372817-d8k9ua17m0lucd21og4a90o2qb1jl2cn.apps.googleusercontent.com"),
+                  "374861372817-tltgqakn1qs9up0e8922p5l49gpra54n.apps.googleusercontent.com",
+              clientSecret: ""),
         ),
         ListenableProxyProvider<Google, Classroom>(
             update: (_, google, __) => Classroom(google)),

@@ -20,8 +20,8 @@ class Classroom extends GoogleApi<ClassroomApi> with ChangeNotifier {
 
   Future<(List<Course>, String?)?> getCourses(
       {int pageSize = 20, String? token, String? cutoffDate}) async {
-    ListCoursesResponse? response = await getResponse(() async =>
-        (await api)?.courses.list(pageToken: token, pageSize: pageSize));
+    ListCoursesResponse? response =
+        await list((ClassroomApi api) => api.courses.list);
     String? nextPageToken = response?.nextPageToken;
     if (nextPageToken != null) {
       nextPageToken = DateTime.parse(response?.courses?.last.creationTime ?? "")
@@ -44,18 +44,16 @@ class Classroom extends GoogleApi<ClassroomApi> with ChangeNotifier {
 
   Future<Teacher?> getTeacher(String courseId, String teacherId) async {
     return getResponse(
-        () async => (await api)?.courses.teachers.get(courseId, teacherId));
+        (ClassroomApi api) => api.courses.teachers.get(courseId, teacherId));
   }
 
   Future<(List<CourseWork>, String?)?> getCourseWork(Course course,
       {int pageSize = 20, String? token, String? cutoffDate}) async {
     String? id = course.id;
     if (id != null) {
-      ListCourseWorkResponse? response = await getResponse(() async =>
-          (await api)
-              ?.courses
-              .courseWork
-              .list(id, pageToken: token, pageSize: pageSize));
+      ListCourseWorkResponse? response = await list(
+          (ClassroomApi api) => api.courses.courseWork.list,
+          positional: [id]);
       String? nextPageToken = response?.nextPageToken;
       if (nextPageToken != null) {
         nextPageToken =
@@ -84,11 +82,9 @@ class Classroom extends GoogleApi<ClassroomApi> with ChangeNotifier {
       {int pageSize = 20, String? token, String? cutoffDate}) async {
     String? id = course.id;
     if (id != null) {
-      ListAnnouncementsResponse? response = await getResponse(() async =>
-          (await api)
-              ?.courses
-              .announcements
-              .list(id, pageToken: token, pageSize: pageSize));
+      ListAnnouncementsResponse? response = await list(
+          (ClassroomApi api) => api.courses.announcements.list,
+          positional: [id]);
       String? nextPageToken = response?.nextPageToken;
       if (nextPageToken != null) {
         nextPageToken =
