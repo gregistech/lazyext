@@ -9,10 +9,10 @@ import 'google.dart';
 
 class Drive extends GoogleApi<DriveApi> with ChangeNotifier {
   @override
-  final List<String> scopes = <String>[
+  final Set<String> scopes = {
     DriveApi.driveFileScope,
     DriveApi.driveReadonlyScope,
-  ];
+  };
 
   Drive(Google google) : super(google, (Client client) => DriveApi(client));
 

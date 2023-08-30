@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_profile_picture/flutter_profile_picture.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lazyext/app/preferences.dart';
 import 'package:lazyext/google/google.dart';
 import 'package:provider/provider.dart';
 
@@ -10,7 +9,6 @@ class MainDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    dynamic prefs = Preferences();
     return Drawer(
         child: ListView(
       padding: EdgeInsets.zero,
@@ -19,37 +17,21 @@ class MainDrawer extends StatelessWidget {
           builder: (BuildContext context, Google google, _) => DrawerHeader(
               child: Column(
             children: [
-              FutureBuilder<dynamic>(
-                  future: prefs.name,
+              FutureBuilder<GoogleAccount?>(
+                  future: google.account,
                   builder: (BuildContext context,
-                      AsyncSnapshot<dynamic> nameSnapshot) {
-                    return FutureBuilder<dynamic>(
-                        future: prefs.email,
-                        builder: (BuildContext context,
-                            AsyncSnapshot<dynamic> emailSnapshot) {
-                          return ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              leading: FutureBuilder<dynamic>(
-                                  future: prefs.photo,
-                                  builder: (BuildContext context,
-                                      AsyncSnapshot<dynamic> photoSnapshot) {
-                                    return ProfilePicture(
-                                      name: google.account?.displayName ??
-                                          nameSnapshot.data ??
-                                          "Anonymous",
-                                      img: google.account?.photoUrl ??
-                                          photoSnapshot.data,
-                                      radius: 21,
-                                      fontsize: 21,
-                                    );
-                                  }),
-                              title: Text(google.account?.displayName ??
-                                  nameSnapshot.data ??
-                                  "Anonymous"),
-                              subtitle: Text(google.account?.email ??
-                                  emailSnapshot.data ??
-                                  "Not logged in"));
-                        });
+                      AsyncSnapshot<GoogleAccount?> snapshot) {
+                    return ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: ProfilePicture(
+                          name: snapshot.data?.name ?? "Anonymous",
+                          img: snapshot.data?.photoUrl,
+                          radius: 21,
+                          fontsize: 21,
+                        ),
+                        title: Text(snapshot.data?.name ?? "Anonymous"),
+                        subtitle:
+                            Text(snapshot.data?.email ?? "Not logged in"));
                   }),
               ListTile(
                   contentPadding: EdgeInsets.zero,
