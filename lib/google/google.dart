@@ -13,9 +13,7 @@ import 'package:lazyext/google/oauth.dart';
 typedef ApiCreator<A> = A Function(Client);
 
 class GoogleApi<A> {
-  Set<String> get scopes {
-    return {};
-  }
+  Set<String> get scopes => {};
 
   final Google _google;
   final ApiCreator<A> _apiCreator;
@@ -113,7 +111,11 @@ class Google extends ChangeNotifier {
 
   Future<GoogleAccount?> get account => _googleClient.account;
 
-  Google({required this.clientId});
+  final Set<String> scopes;
+
+  Google({required this.clientId, this.scopes = const {}}) {
+    _userCredentialsSource.scopes.addAll(scopes);
+  }
 
   late final _userCredentialsSource = UserGoogleAccountSource(clientId, this);
 

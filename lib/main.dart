@@ -96,9 +96,11 @@ class _MainWidgetState extends State<MainWidget> {
       providers: [
         ChangeNotifierProvider<Google>(
           create: (_) => Google(
-            clientId:
-                "374861372817-tltgqakn1qs9up0e8922p5l49gpra54n.apps.googleusercontent.com",
-          ),
+              clientId:
+                  "374861372817-tltgqakn1qs9up0e8922p5l49gpra54n.apps.googleusercontent.com",
+              scopes: (Classroom.staticScopes.toList() +
+                      Drive.staticScopes.toList())
+                  .toSet()),
         ),
         ListenableProxyProvider<Google, Classroom>(
             update: (_, google, __) => Classroom(google)),

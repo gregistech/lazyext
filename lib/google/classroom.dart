@@ -6,7 +6,9 @@ import 'google.dart';
 
 class Classroom extends GoogleApi<ClassroomApi> with ChangeNotifier {
   @override
-  final Set<String> scopes = {
+  final Set<String> scopes = staticScopes;
+
+  static const Set<String> staticScopes = {
     ClassroomApi.classroomAnnouncementsReadonlyScope,
     ClassroomApi.classroomCoursesReadonlyScope,
     ClassroomApi.classroomCourseworkMeReadonlyScope,
