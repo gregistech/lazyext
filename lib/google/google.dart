@@ -6,8 +6,8 @@ import 'package:googleapis/oauth2/v2.dart';
 import 'package:googleapis_auth/googleapis_auth.dart';
 import 'package:http/http.dart';
 import 'package:googleapis_auth/googleapis_auth.dart' as gapis;
-import 'package:lazyext/app/preferences.dart';
 import 'package:lazyext/google/oauth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // See https://github.com/dart-lang/sdk/issues/30074, come on...
 typedef ApiCreator<A> = A Function(Client);
@@ -91,7 +91,7 @@ class GoogleAccount {
   late String name;
   late String photoUrl;
   late String email;
-  final AccessCredentials credentials;
+  AccessCredentials credentials;
 
   GoogleAccount(this.name, this.photoUrl, this.email, this.credentials);
   GoogleAccount.fromRemote(Userinfo info, this.credentials) {
@@ -167,7 +167,7 @@ class OfflineGoogleClient {
                     ?.credentials
                     .accessToken
                     .data) {
-          _credentialsStorage.account = Future.value(current);
+          _credentialsStorage.saveAccount(current);
         }
         return current;
       }
@@ -183,6 +183,7 @@ class OfflineGoogleClient {
         try {
           current = await source.refreshAccount(old);
           if (current != null) {
+            _credentialsStorage.saveAccount(current);
             return current;
           }
         } on UnimplementedError {
@@ -190,8 +191,7 @@ class OfflineGoogleClient {
         }
       }
     }
-    _credentialsStorage.account = Future.value(current);
-    return current;
+    return null;
   }
 
   Future<void> logOut() async {
@@ -224,6 +224,10 @@ class OfflineGoogleClient {
       try {
         print("request $i.: start");
         current = await source.requestScope(scopes);
+        if (current != null) {
+          _credentialsStorage.saveAccount(current);
+          break;
+        }
         print("request $i.: ${current?.credentials.accessToken}");
       } on UnimplementedError {
         print("request $i.: unimplemented");
@@ -232,58 +236,48 @@ class OfflineGoogleClient {
         i++;
       }
     }
-    _credentialsStorage.account = Future.value(current);
     return current;
   }
 }
 
 class StoredGoogleAccountStorage implements GoogleAccountSource {
-  final dynamic prefs = Preferences();
+  Future<SharedPreferences> get prefs async => SharedPreferences.getInstance();
 
-  set _credentials(Future<AccessCredentials?> wrapper) {
-    wrapper.then((credentials) {
-      if (credentials != null) {
-        prefs.accessToken = credentials.accessToken.data;
-        prefs.accessTokenType = credentials.accessToken.type;
-        prefs.expiryToken = credentials.accessToken.expiry.toIso8601String();
-        prefs.idToken = credentials.idToken;
-        prefs.scopesToken = credentials.scopes.join(",");
-        if (credentials.refreshToken != null) {
-          prefs.refreshToken = credentials.refreshToken;
-        }
-      }
-    });
-  }
-
-  void _invalidate() {
-    prefs.name = null;
-    prefs.photoUrl = null;
-    prefs.email = null;
-    prefs.accessToken = null;
-    prefs.accessTokenType = null;
-    prefs.expiryToken = null;
-    prefs.idToken = null;
-    prefs.refreshToken = null;
-    prefs.expiryToken = null;
-    prefs.scopesToken = null;
+  Future<AccessCredentials> _saveCredentials(
+      AccessCredentials credentials) async {
+    SharedPreferences current = await prefs;
+    current.setString("accessToken", credentials.accessToken.data);
+    current.setString("accessTokenType", credentials.accessToken.type);
+    current.setString(
+        "expiryToken", credentials.accessToken.expiry.toIso8601String());
+    String? idToken = credentials.idToken;
+    if (idToken != null) {
+      current.setString("idToken", idToken);
+    }
+    current.setString("scopesToken", credentials.scopes.join(","));
+    if (credentials.refreshToken != null) {
+      current.setString("refreshToken", credentials.scopes.join(","));
+    }
+    return credentials;
   }
 
   Future<AccessCredentials?> get _credentials async {
-    String? accessToken = await prefs.accessToken;
+    SharedPreferences current = await prefs;
+    String? accessToken = current.getString("accessToken");
     accessToken = accessToken?.isEmpty ?? true ? null : accessToken;
-    String? accessTokenType = await prefs.accessTokenType;
+    String? accessTokenType = current.getString("accessTokenType");
     accessTokenType = accessTokenType?.isEmpty ?? true ? null : accessTokenType;
-    String? refreshToken = await prefs.refreshToken;
+    String? refreshToken = current.getString("refreshToken");
     refreshToken = refreshToken?.isEmpty ?? true ? null : refreshToken;
-    String? idToken = await prefs.idToken;
+    String? idToken = current.getString("idToken");
     idToken = idToken?.isEmpty ?? true ? null : idToken;
-    String? expiryToken = await prefs.expiryToken;
+    String? expiryToken = current.getString("expiryToken");
     DateTime? expiry;
     if (expiryToken != null) {
       expiry = DateTime.tryParse(expiryToken);
     }
     expiry ??= DateTime.now().toUtc().add(const Duration(hours: 1));
-    String? scopesToken = await prefs.scopesToken;
+    String? scopesToken = current.getString("scopesToken");
     List<String> scopes = [];
     if (scopesToken != null) {
       scopes = scopesToken.split(",");
@@ -311,15 +305,18 @@ class StoredGoogleAccountStorage implements GoogleAccountSource {
   }
 
   @override
-  Future<void> logOut() async => _invalidate();
+  Future<void> logOut() async {
+    throw UnimplementedError();
+  }
 
   @override
   Future<GoogleAccount?> get account async {
     AccessCredentials? credentials = await _credentials;
     if (credentials != null) {
-      String? name = await prefs.name;
-      String? photoUrl = await prefs.photoUrl;
-      String? email = await prefs.email;
+      SharedPreferences current = await prefs;
+      String? name = current.getString("name");
+      String? photoUrl = current.getString("photoUrl");
+      String? email = current.getString("email");
       if (name != null && photoUrl != null && email != null) {
         return GoogleAccount(name, photoUrl, email, credentials);
       }
@@ -327,16 +324,13 @@ class StoredGoogleAccountStorage implements GoogleAccountSource {
     return null;
   }
 
-  set account(Future<GoogleAccount?> current) {
-    current.then((GoogleAccount? current) {
-      if (current != null) {
-        print("storing: ${current.credentials.accessToken}");
-        prefs.name = current.name;
-        prefs.photoUrl = current.photoUrl;
-        prefs.email = current.email;
-        _credentials = Future.value(current.credentials);
-      }
-    });
+  Future<GoogleAccount?> saveAccount(GoogleAccount account) async {
+    SharedPreferences current = await prefs;
+    current.setString("name", account.name);
+    current.setString("photoUrl", account.photoUrl);
+    current.setString("email", account.email);
+    account.credentials = await _saveCredentials(account.credentials);
+    return account;
   }
 }
 

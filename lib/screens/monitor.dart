@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:googleapis/classroom/v1.dart';
-import 'package:lazyext/app/preferences.dart';
 import 'package:lazyext/google/classroom.dart';
 import 'package:lazyext/widgets/g_paginated_list_view.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'screen.dart';
 
@@ -15,8 +15,6 @@ class MonitorScreen extends StatefulWidget {
 }
 
 class _MonitorScreenState extends State<MonitorScreen> {
-  dynamic prefs = Preferences();
-
   @override
   Widget build(BuildContext context) {
     return ScreenWidget(
@@ -28,19 +26,23 @@ class _MonitorScreenState extends State<MonitorScreen> {
                   (<Course>[], null)),
           itemBuilder: (BuildContext context, Course course, int index) =>
               FutureBuilder(
-                  future: prefs.monitor,
-                  builder: (context, AsyncSnapshot<dynamic> snapshot) {
+                  future: SharedPreferences.getInstance(),
+                  builder:
+                      (context, AsyncSnapshot<SharedPreferences> snapshot) {
                     return CheckboxListTile(
                       title: Text(course.name ?? "unknown"),
-                      value: (snapshot.data ?? "").contains(course.id),
+                      value: (snapshot.data?.getString("monitor") ?? "")
+                          .contains(course.id ?? ""),
                       onChanged: (bool? value) {
                         setState(() {
                           if (value ?? false) {
-                            prefs.monitor =
-                                (snapshot.data ?? "") + "${course.id},";
+                            snapshot.data?.setString("monitor",
+                                "${snapshot.data?.getString("monitor") ?? ""}${course.id},");
                           } else {
-                            prefs.monitor = (snapshot.data ?? "")
-                                .replaceAll("${course.id},", "");
+                            snapshot.data?.setString(
+                                "monitor",
+                                (snapshot.data?.getString("monitor") ?? "")
+                                    .replaceAll("${course.id},", ""));
                           }
                         });
                       },

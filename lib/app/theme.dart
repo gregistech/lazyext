@@ -1,28 +1,25 @@
 import 'package:flutter/material.dart';
-import 'package:lazyext/app/preferences.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ThemeProvider with ChangeNotifier {
-  final dynamic prefs = Preferences();
-
-  set followSystem(Future<bool> value) {
-    value.then((value) {
-      prefs.followSystem = value.toString();
-      notifyListeners();
-    });
+  Future<bool> setFollowSystem(bool value) async {
+    (await SharedPreferences.getInstance()).setBool("followSystem", value);
+    notifyListeners();
+    return value;
   }
 
   Future<bool> get followSystem async {
-    return (await prefs.followSystem) != "false";
+    return (await SharedPreferences.getInstance()).getBool("followSystem") ??
+        true;
   }
 
-  set dark(Future<bool> value) {
-    value.then((value) {
-      prefs.theme = value ? "dark" : "light";
-      notifyListeners();
-    });
+  Future<bool> setDark(bool value) async {
+    (await SharedPreferences.getInstance()).setBool("dark", value);
+    notifyListeners();
+    return value;
   }
 
   Future<bool> get dark async {
-    return await prefs.theme != "light";
+    return (await SharedPreferences.getInstance()).getBool("dark") ?? true;
   }
 }

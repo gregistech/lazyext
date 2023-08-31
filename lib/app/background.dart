@@ -3,7 +3,6 @@ import 'package:googleapis/classroom/v1.dart' hide Assignment;
 import 'dart:io';
 import 'package:googleapis/drive/v3.dart' as drive;
 import 'package:lazyext/app/android_file_storage.dart';
-import 'package:lazyext/app/preferences.dart';
 import 'package:lazyext/google/classroom.dart';
 import 'package:lazyext/google/drive.dart';
 import 'package:lazyext/google/google.dart';
@@ -13,6 +12,7 @@ import 'package:lazyext/pdf/storage.dart';
 import 'package:lazyext/widgets/assignment.dart';
 import 'package:mupdf_android/mupdf_android.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 class ClassroomPDFBackgroundService {
@@ -49,10 +49,11 @@ class ClassroomPDFBackgroundService {
     BackgroundFetch.finish(taskId);
   }
 
-  static Future<List<Course>?> getMonitoredCourses(
-      dynamic prefs, Classroom classroom) async {
+  static Future<List<Course>?> getMonitoredCourses(Classroom classroom) async {
     List<Course> courses = await classroom.getAll(classroom.getCourses);
-    List<String>? monitored = ((await prefs.monitor) as String?)?.split(",");
+    List<String>? monitored =
+        ((await SharedPreferences.getInstance()).getString("monitor"))
+            ?.split(",");
     if (monitored != null) {
       return courses.where((Course element) {
         for (String id in monitored) {
@@ -101,12 +102,13 @@ class ClassroomPDFBackgroundService {
   }
 
   static Future<List<Assignment>> getTargetAssignments(
-      dynamic prefs, Classroom classroom, Course course) async {
-    if (await prefs.lastAssignment == null) {
+      Classroom classroom, Course course) async {
+    String? lastAssignment =
+        (await SharedPreferences.getInstance()).getString("lastAssignment");
+    if (lastAssignment == null) {
       return getNewestAssignments(classroom, course);
     } else {
-      return getCutOffynamicAssignments(
-          classroom, course, await prefs.lastAssignment);
+      return getCutOffynamicAssignments(classroom, course, lastAssignment);
     }
   }
 
@@ -142,14 +144,14 @@ class ClassroomPDFBackgroundService {
             "374861372817-tltgqakn1qs9up0e8922p5l49gpra54n.apps.googleusercontent.com");
     Classroom classroom = Classroom(google);
     Drive driveApi = Drive(google);
-    dynamic prefs = Preferences();
 
-    List<Course>? courses = await getMonitoredCourses(prefs, classroom);
+    List<Course>? courses = await getMonitoredCourses(classroom);
     if (courses != null) {
       for (Course course in courses) {
         List<Assignment> assignments =
-            await getTargetAssignments(prefs, classroom, course);
-        prefs.lastAssignment = DateTime.now().toIso8601String();
+            await getTargetAssignments(classroom, course);
+        (await SharedPreferences.getInstance())
+            .setString("lastAssignment", DateTime.now().toIso8601String());
 
         for (Assignment assignment in assignments) {
           Merger merger = PracticeMerger();

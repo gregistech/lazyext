@@ -1,17 +1,16 @@
 import 'package:file_picker/file_picker.dart';
-import 'package:lazyext/app/preferences.dart';
 import 'package:lazyext/pdf/storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AndroidFileStorage {
-  dynamic prefs = Preferences();
-  Future<FileStorage?>? storage;
+  late final Future<FileStorage?>? storage;
 
-  Future<FileStorage?> _rootToFileStorage(Future<dynamic> value) async {
-    String? root = await value;
+  Future<FileStorage?> _rootToFileStorage(String? root) async {
     if (root == null) {
       String? newRoot = await FilePicker.platform.getDirectoryPath();
       if (newRoot != null) {
-        prefs.storageRoot = newRoot;
+        (await SharedPreferences.getInstance())
+            .setString("storageRoot", newRoot);
         return FileStorage(newRoot);
       }
     } else {
@@ -21,6 +20,8 @@ class AndroidFileStorage {
   }
 
   AndroidFileStorage() {
-    storage = _rootToFileStorage(prefs.storageRoot);
+    SharedPreferences.getInstance().then((value) {
+      storage = _rootToFileStorage(value.getString("storageRoot"));
+    });
   }
 }

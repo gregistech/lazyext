@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:googleapis/classroom/v1.dart';
-import 'package:lazyext/app/preferences.dart';
 import 'package:lazyext/google/classroom.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CachedTeacher {
   late String courseId;
@@ -39,12 +39,13 @@ class CachedTeacher {
 
 class CachedTeacherProvider with ChangeNotifier {
   final Classroom _classroom;
-  final dynamic prefs = Preferences();
 
   CachedTeacherProvider(this._classroom);
 
   Future<void> _storeTeacher(CachedTeacher teacher) async {
-    prefs.teachers = "${await prefs.teachers},${teacher.toString()}";
+    final prefs = await SharedPreferences.getInstance();
+    prefs.setString(
+        "teachers", "${prefs.getString("teachers")},${teacher.toString()}");
     changed = true;
   }
 
@@ -52,7 +53,8 @@ class CachedTeacherProvider with ChangeNotifier {
   String? _teacherStore;
   Future<CachedTeacher?> getTeacher(String courseId, String id) async {
     if (changed) {
-      _teacherStore = await prefs.teachers;
+      _teacherStore =
+          (await SharedPreferences.getInstance()).getString("teachers");
       changed = false;
     }
     String? teacherStore = _teacherStore;
