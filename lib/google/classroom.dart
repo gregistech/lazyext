@@ -22,8 +22,10 @@ class Classroom extends GoogleApi<ClassroomApi> with ChangeNotifier {
 
   Future<(List<Course>, String?)?> getCourses(
       {int pageSize = 20, String? token, String? cutoffDate}) async {
-    ListCoursesResponse? response =
-        await list((ClassroomApi api) => api.courses.list);
+    ListCoursesResponse? response = await list(
+        (ClassroomApi api) => api.courses.list,
+        pageToken: token,
+        pageSize: pageSize);
     String? nextPageToken = response?.nextPageToken;
     if (nextPageToken != null) {
       nextPageToken = DateTime.parse(response?.courses?.last.creationTime ?? "")
@@ -55,7 +57,10 @@ class Classroom extends GoogleApi<ClassroomApi> with ChangeNotifier {
     if (id != null) {
       ListCourseWorkResponse? response = await list(
           (ClassroomApi api) => api.courses.courseWork.list,
-          positional: [id]);
+          positional: [id],
+          pageToken: token,
+          pageSize: pageSize,
+          orderBy: "updateTime desc");
       String? nextPageToken = response?.nextPageToken;
       if (nextPageToken != null) {
         nextPageToken =
@@ -86,7 +91,10 @@ class Classroom extends GoogleApi<ClassroomApi> with ChangeNotifier {
     if (id != null) {
       ListAnnouncementsResponse? response = await list(
           (ClassroomApi api) => api.courses.announcements.list,
-          positional: [id]);
+          positional: [id],
+          pageToken: token,
+          pageSize: pageSize,
+          orderBy: "updateTime desc");
       String? nextPageToken = response?.nextPageToken;
       if (nextPageToken != null) {
         nextPageToken =

@@ -54,7 +54,6 @@ class ClassroomPDFBackgroundService {
       SharedPreferences prefs, Classroom classroom) async {
     List<Course> courses = await classroom.getAll(classroom.getCourses);
     List<String>? monitored = prefs.getString("monitor")?.split(",");
-    print(monitored);
     if (monitored != null) {
       return courses.where((Course element) {
         for (String id in monitored) {
@@ -164,9 +163,9 @@ class ClassroomPDFBackgroundService {
                 .replaceAll(RegExp("[^:]+:[^,]+,"), ""));
         prefs.setString("lastAssignment",
             "${prefs.getString("lastAssignment") ?? ""}${course.id ?? "unknown"}:${DateTime.now().toIso8601String()},");
-        print(prefs.getString("lastAssignment"));
 
         for (Assignment assignment in assignments) {
+          print(assignment.name);
           Merger merger = PracticeMerger();
           List<Exercise>? exercises =
               await assignmentToExercises(driveApi, assignment);

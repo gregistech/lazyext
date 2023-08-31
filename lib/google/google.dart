@@ -54,10 +54,13 @@ class GoogleApi<A> {
   Future<R?> list<R>(dynamic Function(A api) request,
       {List<dynamic>? positional,
       Map<Symbol, dynamic>? additional,
-      String? pageToken}) async {
+      String? pageToken,
+      int pageSize = 20,
+      String? orderBy}) async {
     Map<Symbol, dynamic> named = {};
     named[const Symbol("pageToken")] = pageToken;
-    named[const Symbol("pageSize")] = pageToken;
+    named[const Symbol("pageSize")] = pageSize;
+    if (orderBy != null) named[const Symbol("orderBy")] = orderBy;
     if (additional != null) named.addAll(additional);
     return getResponse(
         (A api) => Function.apply(request(api), positional, named));
