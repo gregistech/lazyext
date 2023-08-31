@@ -50,7 +50,7 @@ class _MergedViewState extends State<MergedView>
 
   @override
   void initState() {
-    AndroidFileStorage().storage?.then((Storage? value) => storage = value);
+    AndroidFileStorage().storage.then((Storage? value) => storage = value);
     document = PracticeMerger().exercisesToPDFDocument(widget.exercises);
     dir = getTemporaryDirectory();
     super.initState();
