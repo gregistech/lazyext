@@ -12,7 +12,7 @@ class ThemeProvider with ChangeNotifier {
   }
 
   Future<bool> get followSystem async {
-    return (await prefs.followSystem) == "true";
+    return (await prefs.followSystem) != "false";
   }
 
   set dark(Future<bool> value) {
@@ -23,6 +23,6 @@ class ThemeProvider with ChangeNotifier {
   }
 
   Future<bool> get dark async {
-    return await prefs.theme == "dark";
+    return await prefs.theme != "light";
   }
 }
