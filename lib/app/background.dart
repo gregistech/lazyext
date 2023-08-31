@@ -14,6 +14,7 @@ import 'package:mupdf_android/mupdf_android.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class ClassroomPDFBackgroundService {
   ClassroomPDFBackgroundService() {
@@ -49,11 +50,11 @@ class ClassroomPDFBackgroundService {
     BackgroundFetch.finish(taskId);
   }
 
-  static Future<List<Course>?> getMonitoredCourses(Classroom classroom) async {
+  static Future<List<Course>?> getMonitoredCourses(
+      SharedPreferences prefs, Classroom classroom) async {
     List<Course> courses = await classroom.getAll(classroom.getCourses);
-    List<String>? monitored =
-        ((await SharedPreferences.getInstance()).getString("monitor"))
-            ?.split(",");
+    List<String>? monitored = prefs.getString("monitor")?.split(",");
+    print(monitored);
     if (monitored != null) {
       return courses.where((Course element) {
         for (String id in monitored) {
@@ -102,9 +103,10 @@ class ClassroomPDFBackgroundService {
   }
 
   static Future<List<Assignment>> getTargetAssignments(
-      Classroom classroom, Course course) async {
-    String? lastAssignment =
-        (await SharedPreferences.getInstance()).getString("lastAssignment");
+      SharedPreferences prefs, Classroom classroom, Course course) async {
+    String? lastAssignment = RegExp("specific_string:[^,]+,")
+        .firstMatch(prefs.getString("lastAssignment") ?? "")
+        ?.group(0);
     if (lastAssignment == null) {
       return getNewestAssignments(classroom, course);
     } else {
@@ -139,19 +141,30 @@ class ClassroomPDFBackgroundService {
   }
 
   static Future<void> checkForNewAssignment() async {
-    Google google = Google(
-        clientId:
-            "374861372817-tltgqakn1qs9up0e8922p5l49gpra54n.apps.googleusercontent.com");
+    await dotenv.load();
+    String? clientId;
+    clientId = dotenv.env["CLIENTID"];
+    clientId ??=
+        "374861372817-tltgqakn1qs9up0e8922p5l49gpra54n.apps.googleusercontent.com";
+
+    Google google = Google(clientId: clientId);
     Classroom classroom = Classroom(google);
     Drive driveApi = Drive(google);
+    SharedPreferences prefs = await SharedPreferences.getInstance();
 
-    List<Course>? courses = await getMonitoredCourses(classroom);
+    List<Course>? courses = await getMonitoredCourses(prefs, classroom);
+    print(courses?.length);
     if (courses != null) {
       for (Course course in courses) {
         List<Assignment> assignments =
-            await getTargetAssignments(classroom, course);
-        (await SharedPreferences.getInstance())
-            .setString("lastAssignment", DateTime.now().toIso8601String());
+            await getTargetAssignments(prefs, classroom, course);
+        prefs.setString(
+            "lastAssignment",
+            (prefs.getString("lastAssignment") ?? "")
+                .replaceAll(RegExp("[^:]+:[^,]+,"), ""));
+        prefs.setString("lastAssignment",
+            "${prefs.getString("lastAssignment") ?? ""}${course.id ?? "unknown"}:${DateTime.now().toIso8601String()},");
+        print(prefs.getString("lastAssignment"));
 
         for (Assignment assignment in assignments) {
           Merger merger = PracticeMerger();

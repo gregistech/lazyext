@@ -72,6 +72,7 @@ dependencies:
   dynamic_color: ^1.6.6
   mutex: ^3.0.1
   flutter_appauth: ^6.0.2
+  flutter_dotenv: ^5.1.0
 
 dev_dependencies:
   flutter_test:
@@ -90,4 +91,5 @@ dev_dependencies:
 # The following section is specific to Flutter packages.
 flutter:
   uses-material-design: true
-
+  assets:
+    - .env

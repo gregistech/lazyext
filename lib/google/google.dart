@@ -32,25 +32,18 @@ class GoogleApi<A> {
     A? current = await api;
     if (current != null) {
       try {
-        print("startin' request for response");
         return await request(current);
       } on AccessDeniedException catch (e) {
-        print(e.message);
         if (e.message.contains("invalid_token")) {
-          print("invalid_token");
           await _google.refreshCredentials();
           return await getResponse(request);
         } else if (e.message.contains("insufficient_scope")) {
-          print("should call higher requestScopes");
           if (await _google.requestScopes(scopes)) {
-            print("if higher requestScopes was true");
             return await getResponse(request);
           } else {
-            print("shudda rethrow depth");
             rethrow;
           }
         } else {
-          print("shudda rethrow surface");
           rethrow;
         }
       }
@@ -66,7 +59,6 @@ class GoogleApi<A> {
     named[const Symbol("pageToken")] = pageToken;
     named[const Symbol("pageSize")] = pageToken;
     if (additional != null) named.addAll(additional);
-    print("list: $request");
     return getResponse(
         (A api) => Function.apply(request(api), positional, named));
   }
@@ -134,7 +126,6 @@ class Google extends ChangeNotifier {
   }
 
   Future<bool> requestScopes(Set<String> scopes) async {
-    print("requestScopes higher");
     bool result = (await _googleClient.requestScope(scopes)) != null;
     notifyListeners();
     return result;
@@ -155,11 +146,8 @@ class OfflineGoogleClient {
   }
 
   Future<GoogleAccount?> get account async {
-    int i = 0;
     for (GoogleAccountSource source in _credentialSources) {
       GoogleAccount? current = await source.account;
-      print("account $i. try: ${current?.credentials.accessToken}");
-      i++;
       if (current != null) {
         if (source != _credentialSources.first &&
             current.credentials.accessToken.data !=
@@ -217,23 +205,16 @@ class OfflineGoogleClient {
   }
 
   Future<GoogleAccount?> requestScope(Set<String> scopes) async {
-    print("requestScope googleClient");
     GoogleAccount? current;
-    int i = 0;
     for (GoogleAccountSource source in _credentialSources) {
       try {
-        print("request $i.: start");
         current = await source.requestScope(scopes);
         if (current != null) {
           _credentialsStorage.saveAccount(current);
           break;
         }
-        print("request $i.: ${current?.credentials.accessToken}");
       } on UnimplementedError {
-        print("request $i.: unimplemented");
         continue;
-      } finally {
-        i++;
       }
     }
     return current;
@@ -282,7 +263,6 @@ class StoredGoogleAccountStorage implements GoogleAccountSource {
     if (scopesToken != null) {
       scopes = scopesToken.split(",");
     }
-    print("stored: $accessToken");
     if (accessToken != null && accessTokenType != null) {
       return AccessCredentials(
           AccessToken(accessTokenType, accessToken, expiry),
@@ -401,7 +381,6 @@ class UserGoogleAccountSource implements GoogleAccountSource {
           Userinfo? info =
               await _oauth.getUserInfo(idToken, client: credentials.toClient());
           if (info != null) {
-            print("refreshAccount: ${credentials.accessToken}");
             return GoogleAccount.fromRemote(info, credentials);
           }
         }
@@ -424,7 +403,6 @@ class UserGoogleAccountSource implements GoogleAccountSource {
       Userinfo? info =
           await _oauth.getUserInfo(idToken, client: credentials.toClient());
       if (info != null) {
-        print("remote: ${credentials.accessToken}");
         return GoogleAccount.fromRemote(info, credentials);
       }
     }

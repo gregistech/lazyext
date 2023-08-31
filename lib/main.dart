@@ -10,6 +10,7 @@ import 'package:lazyext/widgets/assignment.dart';
 import 'package:lazyext/widgets/drawer.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'google/classroom.dart';
 import 'google/drive.dart';
@@ -20,6 +21,7 @@ import 'screens/assignments.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load();
   runApp(const MainWidget());
   ClassroomPDFBackgroundService();
 }
@@ -96,8 +98,7 @@ class _MainWidgetState extends State<MainWidget> {
       providers: [
         ChangeNotifierProvider<Google>(
           create: (_) => Google(
-              clientId:
-                  "374861372817-tltgqakn1qs9up0e8922p5l49gpra54n.apps.googleusercontent.com",
+              clientId: dotenv.env["CLIENTID"] ?? "",
               scopes: (Classroom.staticScopes.toList() +
                       Drive.staticScopes.toList())
                   .toSet()),

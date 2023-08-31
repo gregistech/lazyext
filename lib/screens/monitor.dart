@@ -32,7 +32,7 @@ class _MonitorScreenState extends State<MonitorScreen> {
                     return CheckboxListTile(
                       title: Text(course.name ?? "unknown"),
                       value: (snapshot.data?.getString("monitor") ?? "")
-                          .contains(course.id ?? ""),
+                          .contains(course.id ?? "unknown"),
                       onChanged: (bool? value) {
                         setState(() {
                           if (value ?? false) {
