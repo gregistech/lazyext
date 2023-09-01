@@ -1,4 +1,5 @@
 import 'package:background_fetch/background_fetch.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:googleapis/classroom/v1.dart' hide Assignment;
 import 'dart:io';
 import 'package:googleapis/drive/v3.dart' as drive;
@@ -16,6 +17,70 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
+// Processed assignment!
+// Pick a folder to save processed assignments.
+// Log-in to your Google account to fetch assignments.
+
+class ClassroomPDFNotifications {
+  final FlutterLocalNotificationsPlugin _plugin =
+      FlutterLocalNotificationsPlugin();
+
+  @pragma('vm:entry-point')
+  void notificationTapBackground(NotificationResponse notificationResponse) {
+    // ignore: avoid_print
+    print('notification(${notificationResponse.id}) action tapped: '
+        '${notificationResponse.actionId} with'
+        ' payload: ${notificationResponse.payload}');
+    if (notificationResponse.input?.isNotEmpty ?? false) {
+      // ignore: avoid_print
+      print(
+          'notification action tapped with input: ${notificationResponse.input}');
+    }
+  }
+
+  Future<void> showProcessingNotification({bool show = true}) async {
+    const NotificationDetails details = NotificationDetails(
+        android: AndroidNotificationDetails("process", "process",
+            showProgress: true,
+            indeterminate: true,
+            ongoing: true,
+            importance: Importance.min));
+    if (show) {
+      await _plugin.show(
+          0, "Background assignments", "Processing assignments...", details);
+    } else {
+      await _plugin.cancel(0);
+    }
+  }
+
+  Future<void> _showProcessedNotification(Assignment assignment) async {
+    const NotificationDetails details = NotificationDetails(
+        android: AndroidNotificationDetails("processed", "processed",
+            importance: Importance.high));
+    await _plugin.show(
+        assignment.hashCode, "Processed assignment", assignment.name, details);
+  }
+
+  Future<void> showProcessedNotifications(List<Assignment> assignments) async {
+    for (Assignment assignment in assignments) {
+      await _showProcessedNotification(assignment);
+    }
+  }
+
+  Future<bool> requestPermission() async {
+    return await _plugin
+            .resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin>()
+            ?.requestPermission() ??
+        false;
+  }
+
+  Future<void> initialize() async {
+    await _plugin.initialize(const InitializationSettings(
+        android: AndroidInitializationSettings("@mipmap/ic_launcher")));
+  }
+}
+
 class ClassroomPDFBackgroundService {
   ClassroomPDFBackgroundService() {
     BackgroundFetch.configure(
@@ -29,11 +94,14 @@ class ClassroomPDFBackgroundService {
             requiresStorageNotLow: false,
             requiresDeviceIdle: false,
             requiredNetworkType: NetworkType.ANY), (String taskId) async {
-      await checkForNewAssignment();
+      final notifications = ClassroomPDFNotifications();
+      notifications.initialize();
+      await checkForNewAssignment(notifications);
       BackgroundFetch.finish(taskId);
     }, (String taskId) async {
       BackgroundFetch.finish(taskId);
     });
+
     BackgroundFetch.start();
     BackgroundFetch.registerHeadlessTask(backgroundFetchHeadlessTask);
   }
@@ -46,7 +114,9 @@ class ClassroomPDFBackgroundService {
       BackgroundFetch.finish(taskId);
       return;
     }
-    await checkForNewAssignment();
+    final notifications = ClassroomPDFNotifications();
+    await notifications.initialize();
+    await checkForNewAssignment(notifications);
     BackgroundFetch.finish(taskId);
   }
 
@@ -139,7 +209,10 @@ class ClassroomPDFBackgroundService {
     return null;
   }
 
-  static Future<void> checkForNewAssignment() async {
+  static Future<void> checkForNewAssignment(
+      ClassroomPDFNotifications notifications) async {
+    await notifications.showProcessingNotification();
+    print("we in");
     await dotenv.load();
     String? clientId;
     clientId = dotenv.env["CLIENTID"];
@@ -152,7 +225,6 @@ class ClassroomPDFBackgroundService {
     SharedPreferences prefs = await SharedPreferences.getInstance();
 
     List<Course>? courses = await getMonitoredCourses(prefs, classroom);
-    print(courses?.length);
     if (courses != null) {
       for (Course course in courses) {
         List<Assignment> assignments =
@@ -163,9 +235,8 @@ class ClassroomPDFBackgroundService {
                 .replaceAll(RegExp("[^:]+:[^,]+,"), ""));
         prefs.setString("lastAssignment",
             "${prefs.getString("lastAssignment") ?? ""}${course.id ?? "unknown"}:${DateTime.now().toIso8601String()},");
-
+        List<Assignment> done = [];
         for (Assignment assignment in assignments) {
-          print(assignment.name);
           Merger merger = PracticeMerger();
           List<Exercise>? exercises =
               await assignmentToExercises(driveApi, assignment);
@@ -174,9 +245,12 @@ class ClassroomPDFBackgroundService {
             Storage? storage = await AndroidFileStorage().storage;
             await storage
                 ?.savePDF([course.name ?? "unknown", assignment.name], pdf);
+            done.add(assignment);
           }
         }
+        notifications.showProcessedNotifications(done);
       }
     }
+    await notifications.showProcessingNotification(show: false);
   }
 }

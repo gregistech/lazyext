@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:googleapis/classroom/v1.dart';
+import 'package:lazyext/app/background.dart';
 import 'package:lazyext/google/classroom.dart';
 import 'package:lazyext/widgets/g_paginated_list_view.dart';
 import 'package:provider/provider.dart';
@@ -36,6 +37,7 @@ class _MonitorScreenState extends State<MonitorScreen> {
                       onChanged: (bool? value) {
                         setState(() {
                           if (value ?? false) {
+                            ClassroomPDFNotifications().requestPermission();
                             snapshot.data?.setString("monitor",
                                 "${snapshot.data?.getString("monitor") ?? ""}${course.id},");
                           } else {
