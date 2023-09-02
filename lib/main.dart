@@ -6,6 +6,7 @@ import 'package:lazyext/app/theme.dart';
 import 'package:lazyext/google/cached_teacher.dart';
 import 'package:lazyext/screens/monitor.dart';
 import 'package:lazyext/screens/settings.dart';
+import 'package:lazyext/screens/storageroot.dart';
 import 'package:lazyext/widgets/assignment.dart';
 import 'package:lazyext/widgets/drawer.dart';
 import 'package:provider/provider.dart';
@@ -22,12 +23,14 @@ import 'screens/assignments.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load();
-  runApp(const MainWidget());
+  runApp(
+      MainWidget(action: await ClassroomPDFNotifications().getLaunchReason()));
   ClassroomPDFBackgroundService();
 }
 
 class MainWidget extends StatefulWidget {
-  const MainWidget({super.key});
+  final NotificationAction? action;
+  const MainWidget({super.key, this.action});
 
   @override
   State<MainWidget> createState() => _MainWidgetState();
@@ -40,7 +43,7 @@ class _MainWidgetState extends State<MainWidget> {
   }
 
   late final _router = GoRouter(
-    initialLocation: "/courses",
+    initialLocation: widget.action == null ? "/courses" : "/settings",
     routes: [
       ShellRoute(
           builder: (BuildContext context, GoRouterState state, Widget child) {
@@ -75,11 +78,15 @@ class _MainWidgetState extends State<MainWidget> {
                 ]),
             GoRoute(
                 path: "/settings",
-                builder: (context, state) => const SettingsScreen(),
+                builder: (context, state) =>
+                    SettingsScreen(action: widget.action),
                 routes: [
                   GoRoute(
                       path: "monitor",
-                      builder: (context, state) => const MonitorScreen())
+                      builder: (context, state) => const MonitorScreen()),
+                  GoRoute(
+                      path: "storageroot",
+                      builder: (context, state) => const StorageRootScreen())
                 ])
           ]),
       GoRoute(

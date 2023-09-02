@@ -1,20 +1,32 @@
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lazyext/app/background.dart';
 import 'package:lazyext/app/theme.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'screen.dart';
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key});
+  final NotificationAction? action;
+  const SettingsScreen({super.key, this.action});
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  @override
+  void initState() {
+    NotificationAction? action = widget.action;
+    if (action != null) {
+      context
+          .push("/settings/${action.action}")
+          .then((_) => SystemNavigator.pop());
+    }
+    super.initState();
+  }
+
   @override
   Widget build(BuildContext context) {
     return ScreenWidget(
@@ -62,11 +74,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             leading: const Icon(Icons.storage_rounded),
             title: const Text("Storage root"),
             onTap: () async {
-              String? path = await FilePicker.platform.getDirectoryPath();
-              if (path != null) {
-                (await SharedPreferences.getInstance())
-                    .setString("storageRoot", path);
-              }
+              context.push("/settings/storageroot");
             },
           ),
           ListTile(

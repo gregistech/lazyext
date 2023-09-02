@@ -1,4 +1,5 @@
 import 'package:background_fetch/background_fetch.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:googleapis/classroom/v1.dart' hide Assignment;
 import 'dart:io';
@@ -17,24 +18,41 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-// Processed assignment!
-// Pick a folder to save processed assignments.
-// Log-in to your Google account to fetch assignments.
+enum NotificationAction {
+  noStorageRoot("storageroot", "No Storage Root found",
+      "Set a Storage Root for background fetching to work properly!"),
+  googleSignIn("googlesignin", "Sign-in to Google",
+      "Sign-in to Google for background fetching to work properly!");
+
+  const NotificationAction(this.action, this.title, this.desc);
+
+  final String action;
+  final String title;
+  final String desc;
+}
 
 class ClassroomPDFNotifications {
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
 
-  @pragma('vm:entry-point')
-  void notificationTapBackground(NotificationResponse notificationResponse) {
-    // ignore: avoid_print
-    print('notification(${notificationResponse.id}) action tapped: '
-        '${notificationResponse.actionId} with'
-        ' payload: ${notificationResponse.payload}');
-    if (notificationResponse.input?.isNotEmpty ?? false) {
-      // ignore: avoid_print
-      print(
-          'notification action tapped with input: ${notificationResponse.input}');
+  Future<void> initialize() async {
+    await _plugin.initialize(const InitializationSettings(
+        android: AndroidInitializationSettings("@mipmap/ic_launcher")));
+  }
+
+  Future<NotificationAction?> getLaunchReason() async {
+    NotificationAppLaunchDetails? details =
+        await _plugin.getNotificationAppLaunchDetails();
+    if (details?.didNotificationLaunchApp ?? false) {
+      String? payload = details?.notificationResponse?.payload;
+      try {
+        return NotificationAction.values.firstWhere(
+            (NotificationAction element) => element.action == payload);
+      } on StateError {
+        return null;
+      }
+    } else {
+      return null;
     }
   }
 
@@ -67,17 +85,28 @@ class ClassroomPDFNotifications {
     }
   }
 
+  Future<void> _showActionNotification(NotificationAction action) async {
+    NotificationDetails details = NotificationDetails(
+        android: AndroidNotificationDetails(action.action, action.action,
+            importance: Importance.max));
+    await _plugin.show(1, action.title, action.desc, details,
+        payload: action.action);
+  }
+
+  Future<void> showNoStorageRootNotification() async {
+    await _showActionNotification(NotificationAction.noStorageRoot);
+  }
+
+  Future<void> showSignInNotification() async {
+    await _showActionNotification(NotificationAction.googleSignIn);
+  }
+
   Future<bool> requestPermission() async {
     return await _plugin
             .resolvePlatformSpecificImplementation<
                 AndroidFlutterLocalNotificationsPlugin>()
             ?.requestPermission() ??
         false;
-  }
-
-  Future<void> initialize() async {
-    await _plugin.initialize(const InitializationSettings(
-        android: AndroidInitializationSettings("@mipmap/ic_launcher")));
   }
 }
 
@@ -104,6 +133,7 @@ class ClassroomPDFBackgroundService {
 
     BackgroundFetch.start();
     BackgroundFetch.registerHeadlessTask(backgroundFetchHeadlessTask);
+    ClassroomPDFNotifications().requestPermission();
   }
 
   @pragma('vm:entry-point')
@@ -211,8 +241,14 @@ class ClassroomPDFBackgroundService {
 
   static Future<void> checkForNewAssignment(
       ClassroomPDFNotifications notifications) async {
+    Storage? storage;
+    try {
+      storage = await AndroidFileStorage().storage;
+    } on MissingPluginException {
+      await notifications.showNoStorageRootNotification();
+      return;
+    }
     await notifications.showProcessingNotification();
-    print("we in");
     await dotenv.load();
     String? clientId;
     clientId = dotenv.env["CLIENTID"];
@@ -242,7 +278,6 @@ class ClassroomPDFBackgroundService {
               await assignmentToExercises(driveApi, assignment);
           if (exercises != null) {
             PDFDocument pdf = await merger.exercisesToPDFDocument(exercises);
-            Storage? storage = await AndroidFileStorage().storage;
             await storage
                 ?.savePDF([course.name ?? "unknown", assignment.name], pdf);
             done.add(assignment);

@@ -34,6 +34,7 @@ class GoogleApi<A> {
       try {
         return await request(current);
       } on AccessDeniedException catch (e) {
+        print(e.message);
         if (e.message.contains("invalid_token")) {
           await _google.refreshCredentials();
           return await getResponse(request);
