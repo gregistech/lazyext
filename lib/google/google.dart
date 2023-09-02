@@ -134,6 +134,13 @@ class Google extends ChangeNotifier {
     notifyListeners();
     return result;
   }
+
+  Future<void> forceSignIn() async {
+    GoogleAccount? account = await _userCredentialsSource.forceSignIn();
+    if (account != null) {
+      await _googleClient._credentialsStorage.saveAccount(account);
+    }
+  }
 }
 
 class OfflineGoogleClient {
@@ -342,6 +349,11 @@ class UserGoogleAccountSource implements GoogleAccountSource {
     return (await _auth.authorizeAndExchangeCode(request));
   }
 
+  Future<GoogleAccount?> forceSignIn() async {
+    return _responseToCredentials(await _signIn(clientId, scopes))
+        ?.toAccount(_oauth);
+  }
+
   Future<AccessCredentials?> get _credentials async =>
       _responseToCredentials(await _signIn(clientId, scopes));
 
@@ -400,18 +412,8 @@ class UserGoogleAccountSource implements GoogleAccountSource {
   }
 
   @override
-  Future<GoogleAccount?> get account async {
-    AccessCredentials? credentials = await _credentials;
-    String? idToken = credentials?.idToken;
-    if (credentials != null && idToken != null) {
-      Userinfo? info =
-          await _oauth.getUserInfo(idToken, client: credentials.toClient());
-      if (info != null) {
-        return GoogleAccount.fromRemote(info, credentials);
-      }
-    }
-    return null;
-  }
+  Future<GoogleAccount?> get account async =>
+      (await _credentials)?.toAccount(_oauth);
 }
 
 abstract class GoogleAccountSource {
@@ -424,4 +426,17 @@ abstract class GoogleAccountSource {
 extension CredentialsToClient on AccessCredentials {
   Client toClient() =>
       gapis.authenticatedClient(Client(), this, closeUnderlyingClient: true);
+}
+
+extension AccountToClient on AccessCredentials {
+  Future<GoogleAccount?> toAccount(OAuth oauth) async {
+    String? token = idToken;
+    if (token != null) {
+      Userinfo? info = await oauth.getUserInfo(token, client: toClient());
+      if (info != null) {
+        return GoogleAccount.fromRemote(info, this);
+      }
+    }
+    return null;
+  }
 }

@@ -4,6 +4,7 @@ import 'package:lazyext/app/background.dart';
 import 'package:lazyext/app/dynamic_color_scheme.dart';
 import 'package:lazyext/app/theme.dart';
 import 'package:lazyext/google/cached_teacher.dart';
+import 'package:lazyext/screens/googlesignin.dart';
 import 'package:lazyext/screens/monitor.dart';
 import 'package:lazyext/screens/settings.dart';
 import 'package:lazyext/screens/storageroot.dart';
@@ -86,7 +87,10 @@ class _MainWidgetState extends State<MainWidget> {
                       builder: (context, state) => const MonitorScreen()),
                   GoRoute(
                       path: "storageroot",
-                      builder: (context, state) => const StorageRootScreen())
+                      builder: (context, state) => const StorageRootScreen()),
+                  GoRoute(
+                      path: "googlesignin",
+                      builder: (context, state) => const GoogleSignInScreen())
                 ])
           ]),
       GoRoute(
