@@ -1,7 +1,7 @@
-import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart' hide Material;
 import 'package:googleapis/classroom/v1.dart' hide Assignment;
 import 'package:lazyext/app/background.dart';
+import 'package:lazyext/app/dynamic_color_scheme.dart';
 import 'package:lazyext/app/theme.dart';
 import 'package:lazyext/google/cached_teacher.dart';
 import 'package:lazyext/screens/monitor.dart';
@@ -95,49 +95,25 @@ class _MainWidgetState extends State<MainWidget> {
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
-      providers: [
-        ChangeNotifierProvider<Google>(
-          create: (_) => Google(
-              clientId: dotenv.env["CLIENTID"] ?? "",
-              scopes: (Classroom.staticScopes.toList() +
-                      Drive.staticScopes.toList())
-                  .toSet()),
-        ),
-        ListenableProxyProvider<Google, Classroom>(
-            update: (_, google, __) => Classroom(google)),
-        ListenableProxyProvider<Classroom, CachedTeacherProvider>(
-            update: (_, classroom, __) => CachedTeacherProvider(classroom)),
-        ListenableProxyProvider<Google, Drive>(
-            update: (_, google, __) => Drive(google)),
-        ChangeNotifierProvider<ThemeProvider>(create: (_) => ThemeProvider())
-      ],
-      child:
-          DynamicColorBuilder(builder: (ColorScheme? light, ColorScheme? dark) {
-        return Consumer<ThemeProvider>(builder: (context, theme, _) {
-          return FutureBuilder<bool>(
-              future: theme.followSystem,
-              builder: (context, systemSnapshot) {
-                return FutureBuilder<bool>(
-                    future: theme.dark,
-                    builder: (context, darkSnapshot) {
-                      return MaterialApp.router(
-                        title: 'LazyExt',
-                        theme: ThemeData(
-                            useMaterial3: true,
-                            colorScheme: ((systemSnapshot.data ?? true)
-                                ? (MediaQuery.of(context).platformBrightness ==
-                                        Brightness.dark
-                                    ? dark
-                                    : light)
-                                : (darkSnapshot.data ?? true)
-                                    ? dark
-                                    : light)),
-                        routerConfig: _router,
-                      );
-                    });
-              });
-        });
-      }),
-    );
+        providers: [
+          ChangeNotifierProvider<Google>(
+            create: (_) => Google(
+                clientId: dotenv.env["CLIENTID"] ?? "",
+                scopes: (Classroom.staticScopes.toList() +
+                        Drive.staticScopes.toList())
+                    .toSet()),
+          ),
+          ListenableProxyProvider<Google, Classroom>(
+              update: (_, google, __) => Classroom(google)),
+          ListenableProxyProvider<Classroom, CachedTeacherProvider>(
+              update: (_, classroom, __) => CachedTeacherProvider(classroom)),
+          ListenableProxyProvider<Google, Drive>(
+              update: (_, google, __) => Drive(google)),
+          ChangeNotifierProvider<ThemeProvider>(create: (_) => ThemeProvider())
+        ],
+        child: DynamicColorScheme(
+          title: "LazyEXT",
+          routerConfig: _router,
+        ));
   }
 }
