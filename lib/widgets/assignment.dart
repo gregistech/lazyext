@@ -94,6 +94,7 @@ class _AssignmentListItemState extends State<AssignmentListItem> {
                       selected = [];
                     }
                   });
+                  widget.onSelectionChanged(selected);
                 }),
             onTap: () async {
               await showModalBottomSheet(
@@ -105,8 +106,10 @@ class _AssignmentListItemState extends State<AssignmentListItem> {
                             e, e.driveFile?.driveFile?.title ?? "Unknown"))
                         .toList(),
                     initialValue: selected,
-                    onSelectionChanged: (selection) =>
-                        setState(() => selected = selection),
+                    onSelectionChanged: (selection) {
+                      setState(() => selected = selection);
+                      widget.onSelectionChanged(selected);
+                    },
                     cancelText: null,
                     confirmText: null,
                   );

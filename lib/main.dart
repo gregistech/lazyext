@@ -8,7 +8,6 @@ import 'package:lazyext/screens/googlesignin.dart';
 import 'package:lazyext/screens/monitor.dart';
 import 'package:lazyext/screens/settings.dart';
 import 'package:lazyext/screens/storageroot.dart';
-import 'package:lazyext/widgets/assignment.dart';
 import 'package:lazyext/widgets/drawer.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';

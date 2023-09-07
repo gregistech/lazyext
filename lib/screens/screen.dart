@@ -5,12 +5,21 @@ class ScreenWidget extends StatelessWidget {
   final String title;
   final Widget child;
   final TabBar? bottom;
+  final Widget? floatingActionButton;
+  final FloatingActionButtonLocation? floatingActionButtonLocation;
   const ScreenWidget(
-      {super.key, required this.title, required this.child, this.bottom});
+      {super.key,
+      required this.title,
+      required this.child,
+      this.bottom,
+      this.floatingActionButton,
+      this.floatingActionButtonLocation});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+        floatingActionButton: floatingActionButton,
+        floatingActionButtonLocation: floatingActionButtonLocation,
         appBar: AppBar(
             title: Text(title),
             bottom: bottom,
