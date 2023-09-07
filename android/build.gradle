@@ -24,9 +24,6 @@ allprojects {
     repositories {
         google()
         mavenCentral()
-        flatDir {
-            dirs "../../../mupdf_android/mvn_jar"
-        }
         maven {
             url "${project(':background_fetch').projectDir}/libs"
         }

@@ -30,7 +30,7 @@ class PracticeMerger implements Merger {
     String path = "${(await getTemporaryDirectory()).path}/current.png";
     File file = File(path);
     await file.writeAsBytes(img.encodePng(image));
-    PDFObject pdfImage = document.addImage(Image.ctor2(file.path.toJString()));
+    PDFObject pdfImage = document.addImage(Image.new2(file.path.toJString()));
     PDFObject imageDict = document.newDictionary();
     imageDict.put9("Exercise".toJString(), pdfImage);
     double scale = (pageSize.x1 / image.width);
@@ -44,13 +44,13 @@ class PracticeMerger implements Merger {
 
   @override
   Future<PDFDocument> exercisesToPDFDocument(List<Exercise> exercises) async {
-    PDFDocument document = PDFDocument.ctor1();
+    PDFDocument document = PDFDocument.new1();
     for (Exercise exercise in exercises) {
       img.Image? image = exercise.image;
       if (image != null) {
-        Buffer buffer = Buffer.ctor1();
+        Buffer buffer = Buffer.new1();
         PDFObject resources = document.newDictionary();
-        Rect a4 = MuPDF.MEDIABOXES["A4"] ?? Rect.ctor1(0, 0, 595, 842);
+        Rect a4 = MuPDF.MEDIABOXES["A4"] ?? Rect.new1(0, 0, 595, 842);
         _putPatternOnBuffer(buffer, a4, y: a4.y1 - image.height);
         resources.put9("XObject".toJString(),
             await _putExerciseImageOnBuffer(buffer, document, a4, image));

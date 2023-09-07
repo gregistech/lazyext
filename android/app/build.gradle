@@ -64,6 +64,17 @@ android {
         }
     }
 
+    repositories {
+        google()
+        mavenCentral()
+        maven { url 'https://maven.ghostscript.com' }
+    }
+
+    dependencies {
+        implementation 'com.artifex.mupdf:fitz:1.23.0@aar'
+    }
+
+
     dependencies {
         coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.1.5'
     }

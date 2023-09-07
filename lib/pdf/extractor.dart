@@ -35,8 +35,8 @@ class ExerciseExtractor {
 
   Future<Image?> _pageRectToImage(mupdf.Page page, mupdf.Rect rect) async {
     mupdf.Pixmap pixmap =
-        mupdf.Pixmap.ctor4(mupdf.ColorSpace.DeviceRGB, rect, true);
-    mupdf.DrawDevice device = mupdf.DrawDevice.ctor2(pixmap);
+        mupdf.Pixmap.new4(mupdf.ColorSpace.DeviceRGB, rect, true);
+    mupdf.DrawDevice device = mupdf.DrawDevice.new2(pixmap);
     page.run(device, mupdf.Matrix.Identity(), mupdf.Cookie());
     return _pixmapToImage(pixmap);
   }
@@ -71,11 +71,12 @@ class ExerciseExtractor {
   }
 
   mupdf.Rect _pageToRect(mupdf.Page page) {
-    return _boundsToRect(page, page.getBounds().y0, page.getBounds().y1);
+    return _boundsToRect(
+        page, page.getMarkBounds().y0, page.getMarkBounds().y1);
   }
 
   mupdf.Rect _boundsToRect(mupdf.Page page, double start, double end) {
-    return mupdf.Rect.ctor1(0, start, page.getBounds().x1, end);
+    return mupdf.Rect.new1(0, start, page.getMarkBounds().x1, end);
   }
 
   double _getPageTop(mupdf.Page page) {
