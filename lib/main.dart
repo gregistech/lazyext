@@ -60,22 +60,10 @@ class _MainWidgetState extends State<MainWidget> {
                 builder: (context, state) => const CoursesScreen(),
                 routes: [
                   GoRoute(
-                      path: 'assignments',
-                      builder: (context, state) =>
-                          AssignmentsScreen(course: state.extra as Course),
-                      routes: [
-                        GoRoute(
-                          path: 'assignment',
-                          builder: (context, state) {
-                            (Course, Assignment) extra =
-                                state.extra as (Course, Assignment);
-                            return AssignmentScreen(
-                              course: extra.$1,
-                              assignment: extra.$2,
-                            );
-                          },
-                        )
-                      ]),
+                    path: 'assignments',
+                    builder: (context, state) =>
+                        AssignmentsScreen(course: state.extra as Course),
+                  ),
                 ]),
             GoRoute(
                 path: "/settings",

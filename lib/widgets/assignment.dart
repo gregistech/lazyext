@@ -5,6 +5,7 @@ import 'package:googleapis/drive/v3.dart' hide Drive;
 import 'package:intl/intl.dart';
 import 'package:lazyext/google/cached_teacher.dart';
 import 'package:lazyext/widgets/cached_teacher_pfp.dart';
+import 'package:multi_select_flutter/multi_select_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -49,35 +50,75 @@ class Assignment implements Comparable<Assignment> {
   }
 }
 
-class AssignmentListItem extends StatelessWidget {
+class AssignmentListItem extends StatefulWidget {
   final Course course;
   final Assignment assignment;
+  final void Function(List<Material> selected) onSelectionChanged;
   const AssignmentListItem(
-      {super.key, required this.course, required this.assignment});
+      {super.key,
+      required this.course,
+      required this.assignment,
+      required this.onSelectionChanged});
+
+  @override
+  State<AssignmentListItem> createState() => _AssignmentListItemState();
+}
+
+class _AssignmentListItemState extends State<AssignmentListItem> {
+  List<Material> selected = [];
+  late List<Material> materials = widget.assignment.materials
+      .where((element) => element.driveFile != null)
+      .toList();
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<CachedTeacher?>(
         future: Provider.of<CachedTeacherProvider>(context, listen: false)
-            .getTeacher(course.id ?? "", assignment.creatorId),
+            .getTeacher(widget.course.id ?? "", widget.assignment.creatorId),
         builder: (context, snapshot) {
           CachedTeacher? teacher = snapshot.data;
           return ListTile(
             leading: CachedTeacherProfilePicture(teacher: teacher),
-            title: Text(assignment.name.trim()),
+            title: Text(widget.assignment.name.trim()),
             subtitle: Text(
-                "${DateFormat.yMMMMEEEEd().format(assignment.creationTime)}${teacher?.name == null ? '' : '\n${teacher?.name}'}"),
-            trailing: Text(assignment.materials.length.toString()),
-            onTap: () {
-              context.push("/courses/assignments/assignment",
-                  extra: (course, assignment));
+                "${DateFormat.yMMMMEEEEd().format(widget.assignment.creationTime)}${teacher?.name == null ? '' : '\n${teacher?.name}'}"),
+            trailing: Checkbox(
+                value: selected.isEmpty
+                    ? false
+                    : (selected.length == materials.length ? true : null),
+                onChanged: (bool? value) {
+                  setState(() {
+                    if (value ?? false) {
+                      selected = materials;
+                    } else {
+                      selected = [];
+                    }
+                  });
+                }),
+            onTap: () async {
+              await showModalBottomSheet(
+                context: context,
+                builder: (ctx) {
+                  return MultiSelectBottomSheet<Material>(
+                    items: materials
+                        .map((e) => MultiSelectItem<Material>(
+                            e, e.driveFile?.driveFile?.title ?? "Unknown"))
+                        .toList(),
+                    initialValue: selected,
+                    onSelectionChanged: (selection) =>
+                        setState(() => selected = selection),
+                    cancelText: null,
+                    confirmText: null,
+                  );
+                },
+              );
             },
           );
         });
   }
 }
 
-class AssignmentView extends StatefulWidget {
+/*class AssignmentView extends StatefulWidget {
   final Course course;
   final Assignment assignment;
   const AssignmentView(
@@ -175,11 +216,13 @@ class _AssignmentViewState extends State<AssignmentView> {
       ],
     );
   }
-}
+}*/
 
 class AssignmentListView extends StatefulWidget {
   final Course course;
-  const AssignmentListView({super.key, required this.course});
+  const AssignmentListView(
+      {super.key, required this.course, required this.onSelectionChanged});
+  final void Function(List<Material> selected) onSelectionChanged;
 
   @override
   State<AssignmentListView> createState() => _AssignmentListViewState();
@@ -188,6 +231,7 @@ class AssignmentListView extends StatefulWidget {
 class _AssignmentListViewState extends State<AssignmentListView> {
   List<bool> reachedLast = [false, false];
   List<String> ids = [];
+  Map<String, List<Material>> selected = {};
 
   @override
   Widget build(BuildContext context) {
@@ -247,6 +291,14 @@ class _AssignmentListViewState extends State<AssignmentListView> {
         comparator: (a, b) => b.compareTo(a),
         shouldSort: true,
         itemBuilder: (BuildContext context, Assignment item, int index) =>
-            AssignmentListItem(course: widget.course, assignment: item));
+            AssignmentListItem(
+              course: widget.course,
+              assignment: item,
+              onSelectionChanged: (selection) {
+                selected[item.id] = selection;
+                widget.onSelectionChanged(selected.values.fold(
+                    [], (previousValue, element) => previousValue + element));
+              },
+            ));
   }
 }

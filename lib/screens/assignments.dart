@@ -4,20 +4,6 @@ import 'package:lazyext/screens/screen.dart';
 
 import '../widgets/assignment.dart';
 
-class AssignmentScreen extends StatelessWidget {
-  final Course course;
-  final Assignment assignment;
-  const AssignmentScreen(
-      {super.key, required this.course, required this.assignment});
-
-  @override
-  Widget build(BuildContext context) {
-    return ScreenWidget(
-        title: "Assignment",
-        child: AssignmentView(course: course, assignment: assignment));
-  }
-}
-
 class AssignmentsScreen extends StatefulWidget {
   final Course course;
   const AssignmentsScreen({super.key, required this.course});
@@ -31,7 +17,10 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
   Widget build(BuildContext context) {
     return ScreenWidget(
       title: "Assignments",
-      child: AssignmentListView(course: widget.course),
+      child: AssignmentListView(
+        course: widget.course,
+        onSelectionChanged: (selection) {},
+      ),
     );
   }
 }
