@@ -1,16 +1,12 @@
 import 'package:flutter/material.dart' hide Material;
-import 'package:go_router/go_router.dart';
 import 'package:googleapis/classroom/v1.dart';
-import 'package:googleapis/drive/v3.dart' hide Drive;
 import 'package:intl/intl.dart';
 import 'package:lazyext/google/cached_teacher.dart';
 import 'package:lazyext/widgets/cached_teacher_pfp.dart';
 import 'package:multi_select_flutter/multi_select_flutter.dart';
 import 'package:provider/provider.dart';
-import 'package:path_provider/path_provider.dart';
 
 import '../google/classroom.dart';
-import '../google/drive.dart';
 import 'g_paginated_list_view.dart';
 
 class Assignment implements Comparable<Assignment> {

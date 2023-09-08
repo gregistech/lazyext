@@ -83,9 +83,12 @@ class _MainWidgetState extends State<MainWidget> {
       GoRoute(
           path: '/compare',
           builder: (context, state) {
-            (List<String>, String) extra =
-                state.extra as (List<String>, String);
-            return CompareScreen(dest: extra.$1, path: extra.$2);
+            List<String>? extra = state.extra as List<String>?;
+            if (extra == null) {
+              return const Placeholder();
+            } else {
+              return CompareScreen(path: extra);
+            }
           }),
     ],
   );

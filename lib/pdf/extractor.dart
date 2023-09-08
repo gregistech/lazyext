@@ -155,7 +155,7 @@ class ExerciseExtractor {
     return exercise;
   }
 
-  Future<Exercise> _exerciseToImage(
+  Future<Image?> _exerciseToImage(
       Exercise prev, mupdf.Document document) async {
     List<Image> images = [];
     for ((mupdf.Page, mupdf.Rect) rect in _exerciseToRects(document, prev)) {
@@ -165,15 +165,14 @@ class ExerciseExtractor {
       }
     }
     if (images.length == 1) {
-      prev.image = images.first;
+      return images.first;
     } else if (images.length > 1) {
-      prev.image = _stitchImages(images);
+      return _stitchImages(images);
     }
-    return prev;
+    return null;
   }
 
-  Future<List<Exercise>> _extractExercises(mupdf.Document document) async {
-    List<Exercise> exercises = [];
+  Iterable<Future<Exercise?>> _extractExercises(mupdf.Document document) sync* {
     Exercise? prev;
     for (int i = 0; i < document.countPages(0); i++) {
       mupdf.PDFPage page = document.loadPage(i, i).castTo(mupdf.PDFPage.type);
@@ -186,8 +185,10 @@ class ExerciseExtractor {
             prev.end = (i, line.bbox.y0);
             prev = _offsetExercise(prev, first: isFirst);
             isFirst = false;
-            prev = await _exerciseToImage(prev, document);
-            exercises.add(prev.copyWith());
+            yield Future<Exercise?>.microtask(() async {
+              prev?.image = await _exerciseToImage(prev, document);
+              return prev?.copyWith();
+            });
           }
           prev = Exercise(start: (i, line.bbox.y0));
         }
@@ -196,14 +197,16 @@ class ExerciseExtractor {
         prev.end = (i, _getPageBottom(page));
         if (i + 1 == document.countPages(0)) {
           prev = _offsetExercise(prev, last: true);
-          prev = await _exerciseToImage(prev, document);
-          exercises.add(prev.copyWith());
+          yield Future<Exercise?>.microtask(() async {
+            prev?.image = await _exerciseToImage(prev, document);
+            return prev?.copyWith();
+          });
         }
       }
     }
-    return exercises;
   }
 
+  @Deprecated("cos")
   String _getDocumentTitle(mupdf.Document document) {
     String? title;
     RegExpMatch? match = titleRegex.firstMatch(document.pages.first
@@ -214,10 +217,14 @@ class ExerciseExtractor {
     return title ?? document.getMetadata("info:Title");
   }
 
-  Future<ExerciseCollection> getExerciseCollection(File file) async {
+  Stream<Exercise> getExercisesFromFile(File file) async* {
     mupdf.Document document =
         mupdf.Document.openDocument(file.path.toJString());
-    List<Exercise> exercises = await _extractExercises(document);
-    return (_getDocumentTitle(document), exercises);
+    for (Future<Exercise?> exercise in _extractExercises(document)) {
+      Exercise? done = await exercise;
+      if (done != null) {
+        yield done;
+      }
+    }
   }
 }

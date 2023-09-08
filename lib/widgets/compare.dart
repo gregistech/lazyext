@@ -1,109 +1,50 @@
+import 'dart:core';
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
+import 'package:async/async.dart' show StreamGroup;
 
-import 'package:lazyext/app/android_file_storage.dart';
-
-import '../pdf/storage.dart';
 import 'packagE:image/image.dart' as img;
 
 import 'package:flutter/material.dart';
-import 'package:jni/jni.dart';
-import 'package:lazyext/pdf/merger.dart';
-import 'package:mupdf_android/mupdf_android.dart' as mupdf;
-import 'package:path_provider/path_provider.dart';
 import 'package:pdfx/pdfx.dart';
 
 import '../pdf/extractor.dart';
 
 class OriginalView extends StatelessWidget {
-  final String path;
-  late final PdfController _controller =
-      PdfController(document: PdfDocument.openFile(path));
-  OriginalView({super.key, required this.path});
+  final Iterable<String> paths;
+  const OriginalView({super.key, required this.paths});
 
   @override
   Widget build(BuildContext context) {
-    return Column(children: [
-      Expanded(
-          child: PdfView(
-        controller: _controller,
-      )),
-    ]);
+    return Visibility(
+      visible: paths.length != 1,
+      replacement: PdfView(
+        controller: PdfController(document: PdfDocument.openFile(paths.first)),
+      ),
+      child: DefaultTabController(
+          length: paths.length,
+          child: Column(
+            children: [
+              TabBar.secondary(tabs: paths.map((e) => Tab(text: e)).toList()),
+              Expanded(
+                child: TabBarView(
+                  children: paths
+                      .map((e) => PdfView(
+                          controller:
+                              PdfController(document: PdfDocument.openFile(e))))
+                      .toList(),
+                ),
+              ),
+            ],
+          )),
+    );
   }
-}
-
-class MergedView extends StatefulWidget {
-  final List<String> dest;
-  final List<Exercise> exercises;
-  const MergedView({super.key, required this.exercises, required this.dest});
-
-  @override
-  State<MergedView> createState() => _MergedViewState();
-}
-
-class _MergedViewState extends State<MergedView>
-    with AutomaticKeepAliveClientMixin<MergedView> {
-  static Storage? storage;
-  static Future<mupdf.PDFDocument>? document;
-  static Future<Directory>? dir;
-
-  @override
-  void initState() {
-    AndroidFileStorage().storage.then((Storage? value) => storage = value);
-    document = PracticeMerger().exercisesToPDFDocument(widget.exercises);
-    dir = getTemporaryDirectory();
-    super.initState();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    super.build(context);
-    return FutureBuilder(
-        future: document,
-        builder:
-            (BuildContext context, AsyncSnapshot<mupdf.PDFDocument> snapshot) {
-          mupdf.PDFDocument? document = snapshot.data;
-          if (document != null) {
-            return FutureBuilder(
-              future: dir,
-              builder:
-                  (BuildContext context, AsyncSnapshot<Directory> snapshot) {
-                Directory? dir = snapshot.data;
-                if (dir != null) {
-                  File file = File("${dir.path}/current.pdf");
-                  document.save(file.path.toJString(), file.path.toJString());
-                  PdfController controller =
-                      PdfController(document: PdfDocument.openFile(file.path));
-                  return Column(children: [
-                    TextButton(
-                        onPressed: () {
-                          storage?.savePDF(widget.dest, document);
-                        },
-                        child: const Text("Save")),
-                    Expanded(
-                        child: PdfView(
-                      controller: controller,
-                    )),
-                  ]);
-                } else {
-                  return const Placeholder();
-                }
-              },
-            );
-          } else {
-            return const Placeholder();
-          }
-        });
-  }
-
-  @override
-  bool get wantKeepAlive => true;
 }
 
 class ExerciseListView extends StatefulWidget {
-  final List<Exercise> exercises;
-  const ExerciseListView({super.key, required this.exercises});
+  final Stream<Exercise> stream;
+  const ExerciseListView({super.key, required this.stream});
 
   @override
   State<ExerciseListView> createState() => _ExerciseListViewState();
@@ -111,26 +52,17 @@ class ExerciseListView extends StatefulWidget {
 
 class _ExerciseListViewState extends State<ExerciseListView>
     with AutomaticKeepAliveClientMixin<ExerciseListView> {
-  Future<List<ImageProvider>> _exercisesToImageProviders(
-      List<Exercise> exercises) async {
-    List<ImageProvider> images = [];
-    for (Exercise exercise in exercises) {
+  Stream<ImageProvider> _exercisesToImageProviders(
+      Stream<Exercise> exercises) async* {
+    await for (Exercise exercise in exercises) {
       img.Image? image = exercise.image;
       if (image != null) {
         ImageProvider? provider = await _imageToImageProvider(image);
         if (provider != null) {
-          images.add(provider);
+          yield provider;
         }
       }
     }
-    return images;
-  }
-
-  Future<List<ImageProvider>>? _imageProviders;
-  @override
-  void initState() {
-    super.initState();
-    _imageProviders = _exercisesToImageProviders(widget.exercises);
   }
 
   Future<ImageProvider?> _imageToImageProvider(img.Image image) async {
@@ -170,28 +102,31 @@ class _ExerciseListViewState extends State<ExerciseListView>
 
   int imageCount = 0;
 
+  final List<ImageProvider> _imageProviders = [];
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    return FutureBuilder(
-      future: _imageProviders,
-      builder:
-          (BuildContext context, AsyncSnapshot<List<ImageProvider>> snapshot) {
-        List<ImageProvider>? images = snapshot.data;
+    return StreamBuilder(
+      stream: _exercisesToImageProviders(widget.stream),
+      builder: (BuildContext context,
+          AsyncSnapshot<ImageProvider<Object>> snapshot) {
+        ImageProvider? provider = snapshot.data;
+        if (provider != null) {
+          _imageProviders.add(provider);
+        }
         return ListView.separated(
-          itemCount: widget.exercises.length,
-          itemBuilder: (BuildContext context, int index) {
-            if (images != null) {
-              return Image(image: images[index]);
-            } else {
+          itemBuilder: (context, index) {
+            try {
+              return Image(image: _imageProviders[index]);
+            } on RangeError {
               return const Placeholder();
             }
           },
-          separatorBuilder: (BuildContext context, int index) {
-            return const Divider(
-              height: 1,
-            );
-          },
+          separatorBuilder: (BuildContext context, int index) => const Divider(
+            height: 1,
+          ),
+          itemCount: _imageProviders.length,
         );
       },
     );
@@ -201,65 +136,36 @@ class _ExerciseListViewState extends State<ExerciseListView>
   bool get wantKeepAlive => true;
 }
 
-class ExercisesView extends StatefulWidget {
-  final String title;
-  final List<Exercise> exercises;
-  const ExercisesView(
-      {super.key, required this.title, required this.exercises});
+class MergeView extends StatefulWidget {
+  final Stream<Exercise> stream;
+  const MergeView({super.key, required this.stream});
 
   @override
-  State<ExercisesView> createState() => _ExercisesViewState();
+  State<MergeView> createState() => _MergeViewState();
 }
 
-class _ExercisesViewState extends State<ExercisesView> {
+class _MergeViewState extends State<MergeView> {
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(widget.title),
-        Flexible(child: ExerciseListView(exercises: widget.exercises)),
-      ],
-    );
+    return ExerciseListView(stream: widget.stream);
   }
 }
 
 class CompareView extends StatelessWidget {
-  final List<String> dest;
-  final String path;
+  final Iterable<String> paths;
   final ExerciseExtractor _extractor = ExerciseExtractor();
-  CompareView({super.key, required this.path, required this.dest});
+  CompareView({super.key, required this.paths});
+
+  Stream<Exercise> _getExerciseStream() => StreamGroup.merge(
+      paths.map((e) => _extractor.getExercisesFromFile(File(e))).toList());
 
   @override
   Widget build(BuildContext context) {
-    Future<(String, List<Exercise>)> exercises =
-        _extractor.getExerciseCollection(File(path));
     return TabBarView(children: [
       OriginalView(
-        path: path,
+        paths: paths,
       ),
-      FutureBuilder(
-        future: exercises,
-        builder: (BuildContext context,
-            AsyncSnapshot<(String, List<Exercise>)?> snapshot) {
-          (String, List<Exercise>)? data = snapshot.data;
-          if (data != null) {
-            return ExercisesView(title: data.$1, exercises: data.$2);
-          } else {
-            return const Placeholder();
-          }
-        },
-      ),
-      FutureBuilder(
-          future: exercises,
-          builder: (BuildContext context,
-              AsyncSnapshot<(String, List<Exercise>)?> snapshot) {
-            (String, List<Exercise>)? data = snapshot.data;
-            if (data != null) {
-              return MergedView(dest: dest, exercises: data.$2);
-            } else {
-              return const Placeholder();
-            }
-          })
+      MergeView(stream: _getExerciseStream()),
     ]);
   }
 }
