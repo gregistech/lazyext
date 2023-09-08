@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 class ScreenWidget extends StatelessWidget {
   final String title;
   final Widget child;
-  final TabBar? bottom;
+  final PreferredSizeWidget? bottom;
   final Widget? floatingActionButton;
   final FloatingActionButtonLocation? floatingActionButtonLocation;
   const ScreenWidget(

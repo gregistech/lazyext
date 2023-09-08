@@ -1,8 +1,6 @@
 import 'dart:core';
-import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
-import 'package:async/async.dart' show StreamGroup;
 
 import 'packagE:image/image.dart' as img;
 
@@ -153,11 +151,8 @@ class _MergeViewState extends State<MergeView> {
 
 class CompareView extends StatelessWidget {
   final Iterable<String> paths;
-  final ExerciseExtractor _extractor = ExerciseExtractor();
-  CompareView({super.key, required this.paths});
-
-  Stream<Exercise> _getExerciseStream() => StreamGroup.merge(
-      paths.map((e) => _extractor.getExercisesFromFile(File(e))).toList());
+  final Stream<Exercise> exercises;
+  const CompareView({super.key, required this.paths, required this.exercises});
 
   @override
   Widget build(BuildContext context) {
@@ -165,7 +160,7 @@ class CompareView extends StatelessWidget {
       OriginalView(
         paths: paths,
       ),
-      MergeView(stream: _getExerciseStream()),
+      MergeView(stream: exercises),
     ]);
   }
 }
