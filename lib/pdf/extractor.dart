@@ -155,6 +155,12 @@ class ExerciseExtractor {
     return exercise;
   }
 
+  Exercise _wholeDocumentAsExercise(mupdf.Document document) {
+    return Exercise(
+        start: (0, 0),
+        end: (document.pageCount - 1, document.pages.last.getBounds1().y1));
+  }
+
   Future<Image?> _exerciseToImage(
       Exercise prev, mupdf.Document document) async {
     List<Image> images = [];
@@ -193,16 +199,18 @@ class ExerciseExtractor {
           prev = Exercise(start: (i, line.bbox.y0));
         }
       }
-      if (prev != null) {
+      if (prev == null) {
+        prev = _wholeDocumentAsExercise(document);
+      } else {
         prev.end = (i, _getPageBottom(page));
         if (i + 1 == document.countPages(0)) {
           prev = _offsetExercise(prev, last: true);
-          yield Future<Exercise?>.microtask(() async {
-            prev?.image = await _exerciseToImage(prev, document);
-            return prev?.copyWith();
-          });
         }
       }
+      yield Future<Exercise?>.microtask(() async {
+        prev?.image = await _exerciseToImage(prev, document);
+        return prev?.copyWith();
+      });
     }
   }
 
