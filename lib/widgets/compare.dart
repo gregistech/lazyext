@@ -42,25 +42,20 @@ class OriginalView extends StatelessWidget {
 
 class ExerciseListView extends StatefulWidget {
   final Stream<Exercise> stream;
-  const ExerciseListView({super.key, required this.stream});
+  const ExerciseListView({super.key, required this.stream, this.exerciseAdded});
+  final void Function(Exercise)? exerciseAdded;
 
   @override
   State<ExerciseListView> createState() => _ExerciseListViewState();
 }
 
-class _ExerciseListViewState extends State<ExerciseListView>
-    with AutomaticKeepAliveClientMixin<ExerciseListView> {
-  Stream<ImageProvider> _exercisesToImageProviders(
-      Stream<Exercise> exercises) async* {
-    await for (Exercise exercise in exercises) {
-      img.Image? image = exercise.image;
-      if (image != null) {
-        ImageProvider? provider = await _imageToImageProvider(image);
-        if (provider != null) {
-          yield provider;
-        }
-      }
+class _ExerciseListViewState extends State<ExerciseListView> {
+  Future<ImageProvider?> _exerciseToImageProvider(Exercise exercise) async {
+    img.Image? image = exercise.image;
+    if (image != null) {
+      return _imageToImageProvider(image);
     }
+    return null;
   }
 
   Future<ImageProvider?> _imageToImageProvider(img.Image image) async {
@@ -98,69 +93,47 @@ class _ExerciseListViewState extends State<ExerciseListView>
     }
   }
 
-  int imageCount = 0;
-
-  final List<ImageProvider> _imageProviders = [];
+  final List<Future<ImageProvider?>> providers = [];
+  bool done = false;
 
   @override
   Widget build(BuildContext context) {
-    super.build(context);
-    return StreamBuilder(
-      stream: _exercisesToImageProviders(widget.stream),
-      builder: (BuildContext context,
-          AsyncSnapshot<ImageProvider<Object>> snapshot) {
-        ImageProvider? provider = snapshot.data;
-        if (provider != null) {
-          _imageProviders.add(provider);
-        }
-        return ListView.separated(
-          itemBuilder: (context, index) {
-            try {
-              return Image(image: _imageProviders[index]);
-            } on RangeError {
-              return const Placeholder();
+    return StreamBuilder<Exercise>(
+        stream: widget.stream,
+        builder: (context, snapshot) {
+          Exercise? data = snapshot.data;
+          if (data == null) {
+            return const Center(child: CircularProgressIndicator());
+          } else {
+            if (!done) {
+              providers.add(_exerciseToImageProvider(data));
+              final exerciseAdded = widget.exerciseAdded;
+              if (exerciseAdded != null) {
+                exerciseAdded(data);
+              }
             }
-          },
-          separatorBuilder: (BuildContext context, int index) => const Divider(
-            height: 1,
-          ),
-          itemCount: _imageProviders.length,
-        );
-      },
-    );
-  }
-
-  @override
-  bool get wantKeepAlive => true;
-}
-
-class MergeView extends StatefulWidget {
-  final Stream<Exercise> stream;
-  const MergeView({super.key, required this.stream});
-
-  @override
-  State<MergeView> createState() => _MergeViewState();
-}
-
-class _MergeViewState extends State<MergeView> {
-  @override
-  Widget build(BuildContext context) {
-    return ExerciseListView(stream: widget.stream);
-  }
-}
-
-class CompareView extends StatelessWidget {
-  final Iterable<String> paths;
-  final Stream<Exercise> exercises;
-  const CompareView({super.key, required this.paths, required this.exercises});
-
-  @override
-  Widget build(BuildContext context) {
-    return TabBarView(children: [
-      OriginalView(
-        paths: paths,
-      ),
-      MergeView(stream: exercises),
-    ]);
+            if (snapshot.connectionState == ConnectionState.done) {
+              done = true;
+            }
+            return ListView.separated(
+              itemBuilder: (context, index) {
+                return FutureBuilder<ImageProvider?>(
+                    future: providers[index],
+                    builder: (context, snapshot) {
+                      ImageProvider? provider = snapshot.data;
+                      if (provider == null) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      return Image(image: provider);
+                    });
+              },
+              separatorBuilder: (BuildContext context, int index) =>
+                  const Divider(
+                height: 1,
+              ),
+              itemCount: providers.length,
+            );
+          }
+        });
   }
 }

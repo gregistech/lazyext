@@ -213,7 +213,7 @@ class ClassroomPDFBackgroundService {
     }
   }
 
-  static Future<Stream<Exercise>?> assignmentToExercises(
+  static Future<List<Exercise>?> assignmentToExercises(
       Drive driveApi, Assignment assignment) async {
     ExerciseExtractor extractor = ExerciseExtractor();
     for (Material material in assignment.materials) {
@@ -229,7 +229,7 @@ class ClassroomPDFBackgroundService {
                   "${(await getTemporaryDirectory()).path}/${const Uuid().v4()}.pdf");
               if (path != null) {
                 File file = File(path);
-                return extractor.getExercisesFromFile(file);
+                return extractor.getExercisesFromFile(file).toList();
               }
             }
           }
@@ -274,7 +274,7 @@ class ClassroomPDFBackgroundService {
         List<Assignment> done = [];
         for (Assignment assignment in assignments) {
           Merger merger = PracticeMerger();
-          Stream<Exercise>? exercises =
+          List<Exercise>? exercises =
               await assignmentToExercises(driveApi, assignment);
           if (exercises != null) {
             PDFDocument pdf = await merger.exercisesToPDFDocument(exercises);

@@ -8,7 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'extractor.dart';
 
 abstract class Merger {
-  Future<PDFDocument> exercisesToPDFDocument(Stream<Exercise> exercises);
+  Future<PDFDocument> exercisesToPDFDocument(List<Exercise> exercises);
 }
 
 mixin ImageMerger {
@@ -46,9 +46,9 @@ class PracticeMerger with ImageMerger implements Merger {
   }
 
   @override
-  Future<PDFDocument> exercisesToPDFDocument(Stream<Exercise> exercises) async {
+  Future<PDFDocument> exercisesToPDFDocument(List<Exercise> exercises) async {
     PDFDocument document = PDFDocument.new1();
-    await for (Exercise exercise in exercises) {
+    for (Exercise exercise in exercises) {
       img.Image? image = exercise.image;
       if (image != null) {
         Buffer buffer = Buffer.new1();
@@ -67,10 +67,10 @@ class PracticeMerger with ImageMerger implements Merger {
 
 class SummaryMerger with ImageMerger implements Merger {
   @override
-  Future<PDFDocument> exercisesToPDFDocument(Stream<Exercise> exercises) async {
+  Future<PDFDocument> exercisesToPDFDocument(List<Exercise> exercises) async {
     PDFDocument document = PDFDocument.new1();
     double offset = 0;
-    await for (Exercise exercise in exercises) {
+    for (Exercise exercise in exercises) {
       img.Image? image = exercise.image;
       if (image != null) {
         Buffer buffer = Buffer.new1();

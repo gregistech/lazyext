@@ -41,10 +41,11 @@ class CompareScreenView extends StatefulWidget {
   State<CompareScreenView> createState() => _CompareScreenViewState();
 }
 
-class _CompareScreenViewState extends State<CompareScreenView> {
+class _CompareScreenViewState extends State<CompareScreenView>
+    with AutomaticKeepAliveClientMixin {
   int index = 0;
 
-  late Stream<Exercise> exercises = _getExerciseStream();
+  late List<Exercise> exercises = [];
 
   Future<void> _mergeAndSave(Merger merger) async {
     setState(() => loading = true);
@@ -57,53 +58,68 @@ class _CompareScreenViewState extends State<CompareScreenView> {
     setState(() => loading = false);
   }
 
-  Stream<Exercise> _getExerciseStream() =>
-      StreamGroup.mergeBroadcast(widget.paths
-          .map((e) => ExerciseExtractor().getExercisesFromFile(File(e)))
-          .toList());
+  late Stream<Exercise> stream = StreamGroup.merge(widget.paths
+      .map((e) => ExerciseExtractor().getExercisesFromFile(File(e)))
+      .toList());
 
   bool loading = false;
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     DefaultTabController.of(context).addListener(
         () => setState(() => index = DefaultTabController.of(context).index));
     return ScreenWidget(
-      floatingActionButtonLocation: ExpandableFab.location,
-      floatingActionButton: index == 1
-          ? ExpandableFab(
-              openButtonBuilder: DefaultFloatingActionButtonBuilder(
-                  child: const Icon(Icons.merge)),
-              closeButtonBuilder: DefaultFloatingActionButtonBuilder(
-                  child: const Icon(Icons.close_rounded)),
-              children: [
-                FloatingActionButton(
-                    onPressed: () {
-                      _mergeAndSave(PracticeMerger());
-                    },
-                    child: const Icon(Icons.edit_rounded)),
-                FloatingActionButton(
-                    onPressed: () {
-                      _mergeAndSave(SummaryMerger());
-                    },
-                    child: const Icon(Icons.summarize_rounded))
-              ],
-            )
-          : null,
-      title: "Compare",
-      bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(40),
-        child: Column(
-          children: [
-            TabBar(
-              tabs: widget.tabs,
-            ),
-            Visibility(
-                visible: loading, child: const LinearProgressIndicator()),
-          ],
+        floatingActionButtonLocation: ExpandableFab.location,
+        floatingActionButton: index == 1
+            ? ExpandableFab(
+                openButtonBuilder: DefaultFloatingActionButtonBuilder(
+                    child: const Icon(Icons.merge)),
+                closeButtonBuilder: DefaultFloatingActionButtonBuilder(
+                    child: const Icon(Icons.close_rounded)),
+                children: [
+                  FloatingActionButton(
+                      onPressed: () {
+                        _mergeAndSave(PracticeMerger());
+                      },
+                      child: const Icon(Icons.edit_rounded)),
+                  FloatingActionButton(
+                      onPressed: () {
+                        _mergeAndSave(SummaryMerger());
+                      },
+                      child: const Icon(Icons.summarize_rounded))
+                ],
+              )
+            : null,
+        title: "Compare",
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(40),
+          child: Column(
+            children: [
+              TabBar(
+                tabs: widget.tabs,
+              ),
+              Visibility(
+                  visible: loading, child: const LinearProgressIndicator()),
+            ],
+          ),
         ),
-      ),
-      child: CompareView(paths: widget.paths, exercises: exercises),
-    );
+        child: TabBarView(children: [
+          KeepAlive(
+            keepAlive: true,
+            child: OriginalView(
+              paths: widget.paths,
+            ),
+          ),
+          KeepAlive(
+              keepAlive: true,
+              child: ExerciseListView(
+                stream: stream,
+                exerciseAdded: (e) => exercises.add(e),
+              ))
+        ]));
   }
+
+  @override
+  bool get wantKeepAlive => true;
 }
