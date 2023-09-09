@@ -115,7 +115,7 @@ class _CompareScreenViewState extends State<CompareScreenView>
               keepAlive: true,
               child: ExerciseListView(
                 stream: stream,
-                exerciseAdded: (e) => exercises.add(e),
+                exercisesChanged: (e) => exercises = e,
               ))
         ]));
   }

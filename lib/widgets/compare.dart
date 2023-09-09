@@ -42,8 +42,9 @@ class OriginalView extends StatelessWidget {
 
 class ExerciseListView extends StatefulWidget {
   final Stream<Exercise> stream;
-  const ExerciseListView({super.key, required this.stream, this.exerciseAdded});
-  final void Function(Exercise)? exerciseAdded;
+  const ExerciseListView(
+      {super.key, required this.stream, this.exercisesChanged});
+  final void Function(List<Exercise>)? exercisesChanged;
 
   @override
   State<ExerciseListView> createState() => _ExerciseListViewState();
@@ -94,6 +95,7 @@ class _ExerciseListViewState extends State<ExerciseListView> {
   }
 
   final List<Future<ImageProvider?>> providers = [];
+  final List<Exercise> exercises = [];
   bool done = false;
 
   @override
@@ -107,9 +109,10 @@ class _ExerciseListViewState extends State<ExerciseListView> {
           } else {
             if (!done) {
               providers.add(_exerciseToImageProvider(data));
-              final exerciseAdded = widget.exerciseAdded;
-              if (exerciseAdded != null) {
-                exerciseAdded(data);
+              final exercisesChanged = widget.exercisesChanged;
+              if (exercisesChanged != null) {
+                exercises.add(data);
+                exercisesChanged(exercises);
               }
             }
             if (snapshot.connectionState == ConnectionState.done) {
