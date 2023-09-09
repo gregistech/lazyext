@@ -43,18 +43,28 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
     return jobs.wait;
   }
 
+  bool loading = false;
+
   @override
   Widget build(BuildContext context) {
     return ScreenWidget(
       title: "Assignments",
+      bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(10),
+          child: Visibility(
+            visible: loading,
+            child: const LinearProgressIndicator(),
+          )),
       floatingActionButton: Visibility(
           visible: selected.isNotEmpty,
           child: FloatingActionButton.extended(
             label: const Text("Open"),
             icon: const Icon(Icons.file_open),
             onPressed: () async {
-              context.push("/compare",
+              setState(() => loading = true);
+              await context.push("/compare",
                   extra: (await _downloadPdfs()).nonNulls.toList());
+              setState(() => loading = false);
             },
           )),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
