@@ -4,12 +4,15 @@ import 'package:async/async.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_expandable_fab/flutter_expandable_fab.dart';
+import 'package:go_router/go_router.dart';
 import 'package:jni/jni.dart';
 import 'package:lazyext/pdf/extractor.dart';
 import 'package:lazyext/pdf/merger.dart';
 import 'package:lazyext/screens/screen.dart';
 import 'package:lazyext/widgets/compare.dart';
 import 'package:mupdf_android/mupdf_android.dart' hide Text;
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:uuid/uuid.dart';
 
 class CompareScreen extends StatelessWidget {
@@ -50,11 +53,43 @@ class _CompareScreenViewState extends State<CompareScreenView>
   Future<void> _mergeAndSave(Merger merger) async {
     setState(() => loading = true);
     Future<PDFDocument> document = merger.exercisesToPDFDocument(exercises);
-    String? dir = await FilePicker.platform.getDirectoryPath();
-    if (dir != null) {
-      String path = "$dir/${const Uuid().v4()}.pdf";
-      (await document).save(path.toJString(), path.toJString());
-    }
+    showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text("Successful merge"),
+            content: const Text("Exercises have been successfully merged."),
+            actions: [
+              ElevatedButton(
+                  onPressed: () async {
+                    String? dir = await FilePicker.platform.getDirectoryPath();
+                    if (dir != null) {
+                      String path = "$dir/${const Uuid().v4()}.pdf";
+                      (await document).save(
+                          path.toJString(),
+                          "compress,compress-images,garbage=compact"
+                              .toJString());
+                      if (context.mounted) {
+                        context.pop();
+                      }
+                    }
+                  },
+                  child: const Text("Save")),
+              ElevatedButton(
+                  onPressed: () async {
+                    String path =
+                        "${(await getTemporaryDirectory()).path}/${const Uuid().v4()}.pdf";
+                    (await document).save(path.toJString(),
+                        "compress,compress-images,garbage=compact".toJString());
+                    await Share.shareXFiles([XFile(path)]);
+                    if (context.mounted) {
+                      context.pop();
+                    }
+                  },
+                  child: const Text("Share")),
+            ],
+          );
+        });
     setState(() => loading = false);
   }
 
