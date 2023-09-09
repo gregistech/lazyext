@@ -79,11 +79,13 @@ class _CompareScreenViewState extends State<CompareScreenView>
                     child: const Icon(Icons.close_rounded)),
                 children: [
                   FloatingActionButton(
+                      heroTag: "practice",
                       onPressed: () {
                         _mergeAndSave(PracticeMerger());
                       },
                       child: const Icon(Icons.edit_rounded)),
                   FloatingActionButton(
+                      heroTag: "merger",
                       onPressed: () {
                         _mergeAndSave(SummaryMerger());
                       },
