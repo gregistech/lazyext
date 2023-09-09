@@ -107,18 +107,13 @@ class _CompareScreenViewState extends State<CompareScreenView>
           ),
         ),
         child: TabBarView(children: [
-          KeepAlive(
-            keepAlive: true,
-            child: OriginalView(
-              paths: widget.paths,
-            ),
+          OriginalView(
+            paths: widget.paths,
           ),
-          KeepAlive(
-              keepAlive: true,
-              child: ExerciseListView(
-                stream: stream,
-                exercisesChanged: (e) => exercises = e,
-              ))
+          ExerciseListView(
+            stream: stream,
+            exercisesChanged: (e) => exercises = e,
+          )
         ]));
   }
 

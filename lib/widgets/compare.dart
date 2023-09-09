@@ -5,39 +5,49 @@ import 'dart:ui' as ui;
 import 'packagE:image/image.dart' as img;
 
 import 'package:flutter/material.dart';
+import 'package:jni/jni.dart';
+import 'package:mupdf_android/mupdf_android.dart' as mupdf;
 import 'package:pdfx/pdfx.dart';
 
 import '../pdf/extractor.dart';
 
-class OriginalView extends StatelessWidget {
+class OriginalView extends StatefulWidget {
   final Iterable<String> paths;
   const OriginalView({super.key, required this.paths});
 
   @override
+  State<OriginalView> createState() => _OriginalViewState();
+}
+
+class _OriginalViewState extends State<OriginalView>
+    with AutomaticKeepAliveClientMixin {
+  late final views = widget.paths
+      .map((e) =>
+          PdfView(controller: PdfController(document: PdfDocument.openFile(e))))
+      .toList();
+  @override
   Widget build(BuildContext context) {
-    return Visibility(
-      visible: paths.length != 1,
-      replacement: PdfView(
-        controller: PdfController(document: PdfDocument.openFile(paths.first)),
-      ),
-      child: DefaultTabController(
-          length: paths.length,
-          child: Column(
-            children: [
-              TabBar.secondary(tabs: paths.map((e) => Tab(text: e)).toList()),
-              Expanded(
-                child: TabBarView(
-                  children: paths
-                      .map((e) => PdfView(
-                          controller:
-                              PdfController(document: PdfDocument.openFile(e))))
-                      .toList(),
-                ),
+    super.build(context);
+    return DefaultTabController(
+        length: widget.paths.length,
+        child: Column(
+          children: [
+            TabBar.secondary(
+                tabs: widget.paths
+                    .map((e) => Tab(
+                        text: mupdf.Document.openDocument(e.toJString()).title))
+                    .toList()),
+            Expanded(
+              child: TabBarView(
+                children: views,
               ),
-            ],
-          )),
-    );
+            ),
+          ],
+        ));
   }
+
+  @override
+  bool get wantKeepAlive => true;
 }
 
 class ExerciseListView extends StatefulWidget {
@@ -50,7 +60,8 @@ class ExerciseListView extends StatefulWidget {
   State<ExerciseListView> createState() => _ExerciseListViewState();
 }
 
-class _ExerciseListViewState extends State<ExerciseListView> {
+class _ExerciseListViewState extends State<ExerciseListView>
+    with AutomaticKeepAliveClientMixin {
   Future<ImageProvider?> _exerciseToImageProvider(Exercise exercise) async {
     img.Image? image = exercise.image;
     if (image != null) {
@@ -100,8 +111,10 @@ class _ExerciseListViewState extends State<ExerciseListView> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
+    Stream<Exercise>? stream = done ? null : widget.stream;
     return StreamBuilder<Exercise>(
-        stream: widget.stream,
+        stream: stream,
         builder: (context, snapshot) {
           Exercise? data = snapshot.data;
           if (data == null) {
@@ -139,4 +152,7 @@ class _ExerciseListViewState extends State<ExerciseListView> {
           }
         });
   }
+
+  @override
+  bool get wantKeepAlive => true;
 }
