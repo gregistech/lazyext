@@ -84,7 +84,7 @@ class ExerciseExtractor {
   }
 
   double _getPageBottom(mupdf.Page page) {
-    return mupdf.BBoxFinder().getBounds(page).y1;
+    return page.getBounds1().y1;
   }
 
   List<(mupdf.PDFPage, mupdf.Rect)> _exerciseToRects(
