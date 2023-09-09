@@ -108,6 +108,19 @@ class _ExerciseListViewState extends State<ExerciseListView>
   final List<Future<ImageProvider?>> providers = [];
   final List<Exercise> exercises = [];
   bool done = false;
+  Map<int, bool> disabled = {};
+
+  List<Exercise> get enabledExercises {
+    List<Exercise> result = [];
+    for (int i = 0; i < exercises.length; i++) {
+      if (disabled[i] ?? false) {
+        continue;
+      } else {
+        result.add(exercises[i]);
+      }
+    }
+    return result;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -125,29 +138,46 @@ class _ExerciseListViewState extends State<ExerciseListView>
               final exercisesChanged = widget.exercisesChanged;
               if (exercisesChanged != null) {
                 exercises.add(data);
-                exercisesChanged(exercises);
+                exercisesChanged(enabledExercises);
               }
             }
             if (snapshot.connectionState == ConnectionState.done) {
               done = true;
             }
-            return ListView.separated(
+            return ReorderableListView.builder(
               itemBuilder: (context, index) {
-                return FutureBuilder<ImageProvider?>(
-                    future: providers[index],
-                    builder: (context, snapshot) {
-                      ImageProvider? provider = snapshot.data;
-                      if (provider == null) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-                      return Image(image: provider);
+                return ExerciseListItem(
+                  key: Key(index.toString()),
+                  provider: providers[index],
+                  onChanged: (bool change) {
+                    setState(() {
+                      disabled[index] = !change;
                     });
+                  },
+                  value: !(disabled[index] ?? false),
+                );
               },
-              separatorBuilder: (BuildContext context, int index) =>
-                  const Divider(
-                height: 1,
-              ),
               itemCount: providers.length,
+              onReorder: (int aI, int bI) {
+                setState(() {
+                  Exercise b = exercises[bI];
+                  bool? bDisabled = disabled[bI];
+                  Future<ImageProvider?> bProvider = providers[bI];
+                  Exercise a = exercises[aI];
+                  bool? aDisabled = disabled[aI];
+                  Future<ImageProvider?> aProvider = providers[aI];
+                  exercises[bI] = a;
+                  disabled[bI] = aDisabled ?? false;
+                  providers[bI] = aProvider;
+                  exercises[aI] = b;
+                  disabled[aI] = bDisabled ?? false;
+                  providers[aI] = bProvider;
+                  final exercisesChanged = widget.exercisesChanged;
+                  if (exercisesChanged != null) {
+                    exercisesChanged(enabledExercises);
+                  }
+                });
+              },
             );
           }
         });
@@ -155,4 +185,51 @@ class _ExerciseListViewState extends State<ExerciseListView>
 
   @override
   bool get wantKeepAlive => true;
+}
+
+class ExerciseListItem extends StatefulWidget {
+  const ExerciseListItem(
+      {super.key,
+      required this.provider,
+      required this.onChanged,
+      required this.value});
+
+  final Future<ImageProvider?> provider;
+  final void Function(bool change) onChanged;
+  final bool value;
+
+  @override
+  State<ExerciseListItem> createState() => _ExerciseListItemState();
+}
+
+class _ExerciseListItemState extends State<ExerciseListItem> {
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<ImageProvider?>(
+        future: widget.provider,
+        builder: (context, snapshot) {
+          Widget tile(Widget child) => Row(
+                children: [
+                  Expanded(
+                    child: Stack(alignment: Alignment.centerLeft, children: [
+                      child,
+                      Checkbox(
+                        value: widget.value,
+                        onChanged: (bool? change) {
+                          widget.onChanged(change ?? false);
+                        },
+                      ),
+                    ]),
+                  ),
+                  const Icon(Icons.drag_handle_rounded, size: 45),
+                ],
+              );
+          ImageProvider? provider = snapshot.data;
+          if (provider == null) {
+            return tile(const Center(child: CircularProgressIndicator()));
+          } else {
+            return tile(Image(image: provider));
+          }
+        });
+  }
 }
