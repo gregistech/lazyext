@@ -70,12 +70,13 @@ class _CompareScreenViewState extends State<CompareScreenView>
     DefaultTabController.of(context).addListener(
         () => setState(() => index = DefaultTabController.of(context).index));
     return ScreenWidget(
+        floatingActionButtonAnimator: FloatingActionButtonAnimator.scaling,
         floatingActionButtonLocation: ExpandableFab.location,
         floatingActionButton: index == 1
             ? ExpandableFab(
-                openButtonBuilder: DefaultFloatingActionButtonBuilder(
-                    child: const Icon(Icons.merge)),
-                closeButtonBuilder: DefaultFloatingActionButtonBuilder(
+                openButtonBuilder: RotateFloatingActionButtonBuilder(
+                    child: const Icon(Icons.merge_rounded)),
+                closeButtonBuilder: RotateFloatingActionButtonBuilder(
                     child: const Icon(Icons.close_rounded)),
                 children: [
                   FloatingActionButton(
