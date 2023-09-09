@@ -97,6 +97,17 @@ class _AssignmentListItemState extends State<AssignmentListItem> {
                 context: context,
                 builder: (ctx) {
                   return MultiSelectBottomSheet<Material>(
+                    itemsTextStyle: Theme.of(context).textTheme.bodyMedium,
+                    selectedItemsTextStyle:
+                        Theme.of(context).textTheme.bodyMedium,
+                    checkColor: Theme.of(context).colorScheme.background,
+                    selectedColor:
+                        Theme.of(context).colorScheme.onSecondaryContainer,
+                    unselectedColor:
+                        Theme.of(context).textTheme.bodyMedium?.color,
+                    cancelText: const Text(""),
+                    confirmText: const Text(""),
+                    title: Text(widget.assignment.name),
                     items: materials
                         .map((e) => MultiSelectItem<Material>(
                             e, e.driveFile?.driveFile?.title ?? "Unknown"))
@@ -106,8 +117,6 @@ class _AssignmentListItemState extends State<AssignmentListItem> {
                       setState(() => selected = selection);
                       widget.onSelectionChanged(selected);
                     },
-                    cancelText: null,
-                    confirmText: null,
                   );
                 },
               );
@@ -116,106 +125,6 @@ class _AssignmentListItemState extends State<AssignmentListItem> {
         });
   }
 }
-
-/*class AssignmentView extends StatefulWidget {
-  final Course course;
-  final Assignment assignment;
-  const AssignmentView(
-      {super.key, required this.course, required this.assignment});
-
-  @override
-  State<AssignmentView> createState() => _AssignmentViewState();
-}
-
-class _AssignmentViewState extends State<AssignmentView> {
-  bool loading = false;
-
-  @override
-  Widget build(BuildContext context) {
-    List<Widget> materials = [];
-    for (Material material in widget.assignment.materials) {
-      DriveFile? driveFile = material.driveFile?.driveFile;
-      if (driveFile != null) {
-        materials.add(FutureBuilder(
-          future: Provider.of<Drive>(context, listen: false)
-              .driveFileToFile(driveFile),
-          builder: (BuildContext context, AsyncSnapshot<File?> snapshot) =>
-              ListTile(
-            leading: const Icon(Icons.open_in_new_rounded),
-            title: Text(snapshot.data?.name ?? "UNKNOWN"),
-            onTap: () async {
-              if (!loading) {
-                setState(() {
-                  loading = true;
-                });
-                File? file = snapshot.data;
-                if (file != null) {
-                  File? gdoc = await Provider.of<Drive>(context, listen: false)
-                      .fileToGoogleDoc(file);
-                  if (gdoc != null) {
-                    // ignore: use_build_context_synchronously
-                    if (!context.mounted) return;
-                    Media? pdf =
-                        await Provider.of<Drive>(context, listen: false)
-                            .fileToPdf(gdoc);
-                    if (pdf != null) {
-                      // ignore: use_build_context_synchronously
-                      if (!context.mounted) return;
-                      String? path = await Provider.of<Drive>(context,
-                              listen: false)
-                          .downloadMedia(pdf,
-                              "${(await getApplicationDocumentsDirectory()).path}/test.pdf");
-                      if (path != null) {
-                        // ignore: use_build_context_synchronously
-                        if (!context.mounted) return;
-                        loading = false;
-                        context.push("/compare", extra: (
-                          [
-                            widget.course.name ?? "unknown",
-                            widget.assignment.name
-                          ],
-                          path
-                        ));
-                      }
-                    }
-                  }
-                }
-              }
-            },
-          ),
-        ));
-      }
-    }
-    return Column(
-      children: [
-        FutureBuilder<CachedTeacher?>(
-            future: Provider.of<CachedTeacherProvider>(context, listen: false)
-                .getTeacher(
-                    widget.course.id ?? "", widget.assignment.creatorId),
-            builder:
-                (BuildContext context, AsyncSnapshot<CachedTeacher?> snapshot) {
-              CachedTeacher? teacher = snapshot.data;
-              return ListTile(
-                isThreeLine: true,
-                leading: CachedTeacherProfilePicture(teacher: teacher),
-                title: Text(widget.assignment.name.trim()),
-                subtitle: Text(
-                  "${teacher?.name == null ? "" : "- ${teacher?.name}"}${widget.assignment.text.isEmpty ? "" : '\n\n${widget.assignment.text}'}",
-                ),
-              );
-            }),
-        Visibility(
-            visible: loading,
-            child: const LinearProgressIndicator(value: null)),
-        Expanded(
-          child: ListView(
-            children: materials,
-          ),
-        )
-      ],
-    );
-  }
-}*/
 
 class AssignmentListView extends StatefulWidget {
   final Course course;
