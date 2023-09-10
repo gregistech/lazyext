@@ -93,9 +93,9 @@ class _CompareScreenViewState extends State<CompareScreenView>
     setState(() => loading = false);
   }
 
-  late Stream<Exercise> stream = StreamGroup.merge(widget.paths
-      .map((e) => ExerciseExtractor().getExercisesFromFile(File(e)))
-      .toList());
+  final ExerciseExtractor _extractor = ExerciseExtractor();
+
+  late var paths = widget.paths;
 
   bool loading = false;
 
@@ -144,10 +144,13 @@ class _CompareScreenViewState extends State<CompareScreenView>
         ),
         child: TabBarView(children: [
           OriginalView(
-            paths: widget.paths,
+            paths: paths,
+            onPathsChange: (p0) => paths = p0,
           ),
           ExerciseListView(
-            stream: stream,
+            stream: StreamGroup.merge(paths
+                .map((e) => _extractor.getExercisesFromFile(File(e)))
+                .toList()),
             exercisesChanged: (e) => exercises = e,
           )
         ]));

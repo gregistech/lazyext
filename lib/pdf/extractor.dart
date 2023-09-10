@@ -188,7 +188,6 @@ class ExerciseExtractor {
           isFirst = false;
           yield Future<Exercise?>.microtask(() async {
             prev?.image = await _exerciseToImage(prev, document);
-            print("$j: inner");
             return prev?.copyWith();
           });
         }

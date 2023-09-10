@@ -13,7 +13,9 @@ import '../pdf/extractor.dart';
 
 class OriginalView extends StatefulWidget {
   final Iterable<String> paths;
-  const OriginalView({super.key, required this.paths});
+  final void Function(List<String>) onPathsChange;
+  const OriginalView(
+      {super.key, required this.paths, required this.onPathsChange});
 
   @override
   State<OriginalView> createState() => _OriginalViewState();
@@ -21,26 +23,44 @@ class OriginalView extends StatefulWidget {
 
 class _OriginalViewState extends State<OriginalView>
     with AutomaticKeepAliveClientMixin {
-  late final views = widget.paths
-      .map((e) =>
-          PdfView(controller: PdfController(document: PdfDocument.openFile(e))))
-      .toList();
+  late final Map<String, (Widget, Widget)> paths =
+      Map.fromEntries(widget.paths.map((e) => MapEntry(e, (
+            Tab(
+                child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Visibility(
+                  visible: widget.paths.length > 1,
+                  child: IconButton(
+                    icon: const Icon(Icons.close_outlined),
+                    onPressed: () {
+                      setState(() {
+                        paths.remove(e);
+                        widget.onPathsChange(paths.keys.toList());
+                      });
+                    },
+                  ),
+                ),
+                Text(mupdf.Document.openDocument(e.toJString()).title),
+              ],
+            )),
+            PdfView(
+                controller: PdfController(document: PdfDocument.openFile(e)))
+          ))));
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
     return DefaultTabController(
-        length: widget.paths.length,
+        length: paths.length,
         child: Column(
           children: [
             TabBar.secondary(
-                tabs: widget.paths
-                    .map((e) => Tab(
-                        text: mupdf.Document.openDocument(e.toJString()).title))
-                    .toList()),
+                isScrollable: true,
+                tabs: paths.values.map((e) => e.$1).toList()),
             Expanded(
-              child: TabBarView(
-                children: views,
-              ),
+              child:
+                  TabBarView(children: paths.values.map((e) => e.$2).toList()),
             ),
           ],
         ));
@@ -107,7 +127,6 @@ class _ExerciseListViewState extends State<ExerciseListView>
 
   final List<Future<ImageProvider?>> providers = [];
   final List<Exercise> exercises = [];
-  bool done = false;
   Map<int, bool> disabled = {};
 
   List<Exercise> get enabledExercises {
@@ -125,24 +144,18 @@ class _ExerciseListViewState extends State<ExerciseListView>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    Stream<Exercise>? stream = done ? null : widget.stream;
     return StreamBuilder<Exercise>(
-        stream: stream,
+        stream: widget.stream,
         builder: (context, snapshot) {
           Exercise? data = snapshot.data;
           if (data == null) {
             return const Center(child: CircularProgressIndicator());
           } else {
-            if (!done) {
-              providers.add(_exerciseToImageProvider(data));
-              final exercisesChanged = widget.exercisesChanged;
-              if (exercisesChanged != null) {
-                exercises.add(data);
-                exercisesChanged(enabledExercises);
-              }
-            }
-            if (snapshot.connectionState == ConnectionState.done) {
-              done = true;
+            providers.add(_exerciseToImageProvider(data));
+            final exercisesChanged = widget.exercisesChanged;
+            if (exercisesChanged != null) {
+              exercises.add(data);
+              exercisesChanged(enabledExercises);
             }
             return ReorderableListView.builder(
               itemBuilder: (context, index) {
