@@ -155,12 +155,6 @@ class ExerciseExtractor {
     return exercise;
   }
 
-  Exercise _wholeDocumentAsExercise(mupdf.Document document) {
-    return Exercise(
-        start: (0, 0),
-        end: (document.pageCount - 1, document.pages.last.getBounds1().y1));
-  }
-
   Future<Image?> _exerciseToImage(
       Exercise prev, mupdf.Document document) async {
     List<Image> images = [];
@@ -182,35 +176,40 @@ class ExerciseExtractor {
     Exercise? prev;
     for (int i = 0; i < document.countPages(0); i++) {
       mupdf.PDFPage page = document.loadPage(i, i).castTo(mupdf.PDFPage.type);
-      List<mupdf.StructuredText_TextLine> lines = _getLinesOnPage(page);
+      List<mupdf.StructuredText_TextLine> lines = page.lines
+          .where((element) => exerciseRegex.hasMatch(element.text))
+          .toList();
       bool isFirst = true;
-      for (mupdf.StructuredText_TextLine line in lines) {
-        String text = _charsToText(line.chars);
-        if (exerciseRegex.hasMatch(text)) {
-          if (prev != null) {
-            prev.end = (i, line.bbox.y0);
-            prev = _offsetExercise(prev, first: isFirst);
-            isFirst = false;
-            yield Future<Exercise?>.microtask(() async {
-              prev?.image = await _exerciseToImage(prev, document);
-              return prev?.copyWith();
-            });
-          }
-          prev = Exercise(start: (i, line.bbox.y0));
+      for (int j = 0; j < lines.length; j++) {
+        mupdf.StructuredText_TextLine line = lines[j];
+        if (prev != null) {
+          prev.end = (i, line.bbox.y0);
+          prev = _offsetExercise(prev, first: isFirst);
+          isFirst = false;
+          yield Future<Exercise?>.microtask(() async {
+            prev?.image = await _exerciseToImage(prev, document);
+            print("$j: inner");
+            return prev?.copyWith();
+          });
         }
+        prev = Exercise(start: (i, line.bbox.y0));
       }
       if (prev == null) {
-        prev = _wholeDocumentAsExercise(document);
+        prev = Exercise(start: (i, 0), end: (i, _getPageBottom(page)));
+        yield Future<Exercise?>.microtask(() async {
+          prev?.image = await _exerciseToImage(prev, document);
+          return prev?.copyWith();
+        });
       } else {
         prev.end = (i, _getPageBottom(page));
-        if (i + 1 == document.countPages(0)) {
+        if (i + 1 == document.pages.length) {
           prev = _offsetExercise(prev, last: true);
+          yield Future<Exercise?>.microtask(() async {
+            prev?.image = await _exerciseToImage(prev, document);
+            return prev?.copyWith();
+          });
         }
       }
-      yield Future<Exercise?>.microtask(() async {
-        prev?.image = await _exerciseToImage(prev, document);
-        return prev?.copyWith();
-      });
     }
   }
 
