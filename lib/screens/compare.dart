@@ -130,7 +130,7 @@ class _CompareScreenViewState extends State<CompareScreenView>
                             onPressed: () {
                               _mergeAndSave(PracticeMerger(), exercises);
                             },
-                            child: const Icon(Icons.edit_rounded)),
+                            child: const Icon(Icons.psychology_rounded)),
                         FloatingActionButton(
                             heroTag: "merger",
                             onPressed: () {
