@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart' hide Material;
 import 'package:googleapis/classroom/v1.dart' hide Assignment;
 import 'package:lazyext/app/background.dart';
+import 'package:lazyext/app/drawer_provider.dart';
 import 'package:lazyext/app/dynamic_color_scheme.dart';
 import 'package:lazyext/app/theme.dart';
 import 'package:lazyext/google/cached_teacher.dart';
@@ -110,7 +111,9 @@ class _MainWidgetState extends State<MainWidget> {
               update: (_, classroom, __) => CachedTeacherProvider(classroom)),
           ListenableProxyProvider<Google, Drive>(
               update: (_, google, __) => Drive(google)),
-          ChangeNotifierProvider<ThemeProvider>(create: (_) => ThemeProvider())
+          ChangeNotifierProvider<ThemeProvider>(create: (_) => ThemeProvider()),
+          ChangeNotifierProvider<DrawerProvider>(
+              create: (_) => DrawerProvider())
         ],
         child: DynamicColorScheme(
           title: "LazyEXT",
