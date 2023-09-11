@@ -229,7 +229,7 @@ class ClassroomPDFBackgroundService {
                   "${(await getTemporaryDirectory()).path}/${const Uuid().v4()}.pdf");
               if (path != null) {
                 File file = File(path);
-                return extractor.getExercisesFromFile(file).toList();
+                return extractor.getExercisesFromFile(file);
               }
             }
           }

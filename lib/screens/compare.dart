@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:async/async.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_expandable_fab/flutter_expandable_fab.dart';
@@ -48,9 +47,7 @@ class _CompareScreenViewState extends State<CompareScreenView>
     with AutomaticKeepAliveClientMixin {
   int index = 0;
 
-  late List<Exercise> exercises = [];
-
-  Future<void> _mergeAndSave(Merger merger) async {
+  Future<void> _mergeAndSave(Merger merger, List<Exercise> exercises) async {
     setState(() => loading = true);
     Future<PDFDocument> document = merger.exercisesToPDFDocument(exercises);
     showDialog(
@@ -97,6 +94,13 @@ class _CompareScreenViewState extends State<CompareScreenView>
 
   late var paths = widget.paths;
 
+  late Future<List<List<Exercise>>> result = (paths
+      .fold<List<Future<List<Exercise>>>>(
+          [],
+          (previousValue, path) =>
+              previousValue +
+              [_extractor.getExercisesFromFile(File(path))])).wait;
+
   bool loading = false;
 
   @override
@@ -108,26 +112,38 @@ class _CompareScreenViewState extends State<CompareScreenView>
         floatingActionButtonAnimator: FloatingActionButtonAnimator.scaling,
         floatingActionButtonLocation: ExpandableFab.location,
         floatingActionButton: index == 1
-            ? ExpandableFab(
-                openButtonBuilder: RotateFloatingActionButtonBuilder(
-                    child: const Icon(Icons.merge_rounded)),
-                closeButtonBuilder: RotateFloatingActionButtonBuilder(
-                    child: const Icon(Icons.close_rounded)),
-                children: [
-                  FloatingActionButton(
-                      heroTag: "practice",
-                      onPressed: () {
-                        _mergeAndSave(PracticeMerger());
-                      },
-                      child: const Icon(Icons.edit_rounded)),
-                  FloatingActionButton(
-                      heroTag: "merger",
-                      onPressed: () {
-                        _mergeAndSave(SummaryMerger());
-                      },
-                      child: const Icon(Icons.summarize_rounded))
-                ],
-              )
+            ? FutureBuilder<List<List<Exercise>>>(
+                future: result,
+                builder: (context, snapshot) {
+                  List<List<Exercise>>? data = snapshot.data;
+                  if (data != null) {
+                    List<Exercise> exercises = data.fold([],
+                        (previousValue, element) => previousValue + element);
+                    return ExpandableFab(
+                      openButtonBuilder: RotateFloatingActionButtonBuilder(
+                          child: const Icon(Icons.merge_rounded)),
+                      closeButtonBuilder: RotateFloatingActionButtonBuilder(
+                          child: const Icon(Icons.close_rounded)),
+                      children: [
+                        FloatingActionButton(
+                            heroTag: "practice",
+                            onPressed: () {
+                              _mergeAndSave(PracticeMerger(), exercises);
+                            },
+                            child: const Icon(Icons.edit_rounded)),
+                        FloatingActionButton(
+                            heroTag: "merger",
+                            onPressed: () {
+                              _mergeAndSave(SummaryMerger(), exercises);
+                            },
+                            child: const Icon(Icons.summarize_rounded))
+                      ],
+                    );
+                  } else {
+                    return const FloatingActionButton(
+                        onPressed: null, child: CircularProgressIndicator());
+                  }
+                })
             : null,
         title: "Compare",
         bottom: PreferredSize(
@@ -147,12 +163,23 @@ class _CompareScreenViewState extends State<CompareScreenView>
             paths: paths,
             onPathsChange: (p0) => paths = p0,
           ),
-          ExerciseListView(
-            stream: StreamGroup.merge(paths
-                .map((e) => _extractor.getExercisesFromFile(File(e)))
-                .toList()),
-            exercisesChanged: (e) => exercises = e,
-          )
+          FutureBuilder<List<List<Exercise>>>(
+              future: result,
+              builder: (context, snapshot) {
+                List<List<Exercise>>? data = snapshot.data;
+                if (data != null) {
+                  List<Exercise> exercises = data.fold(
+                      [], (previousValue, element) => previousValue + element);
+                  return ExerciseListView(
+                    exercises: exercises,
+                    exercisesChanged: (e) => setState(() {
+                      result = Future.value([e]);
+                    }),
+                  );
+                } else {
+                  return const Center(child: CircularProgressIndicator());
+                }
+              })
         ]));
   }
 

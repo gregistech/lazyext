@@ -5,6 +5,7 @@ import 'package:image/image.dart';
 import 'package:jni/jni.dart';
 import 'package:mupdf_android/mupdf_android.dart' as mupdf;
 import 'package:path_provider/path_provider.dart';
+import 'package:uuid/uuid.dart';
 
 typedef ExerciseCollection = (String, List<Exercise>);
 typedef ExerciseBound = (int, double);
@@ -29,8 +30,9 @@ class ExerciseExtractor {
 
   Future<Image?> _pixmapToImage(mupdf.Pixmap pixmap) async {
     String? path = (await getTemporaryDirectory()).path;
-    pixmap.saveAsPNG("$path/output.png".toJString());
-    return decodePngFile("$path/output.png");
+    String id = const Uuid().v4();
+    pixmap.saveAsPNG("$path/$id.png".toJString());
+    return decodePngFile("$path/$id.png");
   }
 
   Future<Image?> _pageRectToImage(mupdf.Page page, mupdf.Rect rect) async {
@@ -172,7 +174,8 @@ class ExerciseExtractor {
     return null;
   }
 
-  Iterable<Future<Exercise?>> _extractExercises(mupdf.Document document) sync* {
+  Future<List<Exercise>> _extractExercises(mupdf.Document document) async {
+    List<Exercise> exercises = [];
     Exercise? prev;
     for (int i = 0; i < document.countPages(0); i++) {
       mupdf.PDFPage page = document.loadPage(i, i).castTo(mupdf.PDFPage.type);
@@ -186,30 +189,25 @@ class ExerciseExtractor {
           prev.end = (i, line.bbox.y0);
           prev = _offsetExercise(prev, first: isFirst);
           isFirst = false;
-          yield Future<Exercise?>.microtask(() async {
-            prev?.image = await _exerciseToImage(prev, document);
-            return prev?.copyWith();
-          });
+          prev.image = await _exerciseToImage(prev, document);
+          exercises.add(prev.copyWith());
         }
         prev = Exercise(start: (i, line.bbox.y0));
       }
       if (prev == null) {
         prev = Exercise(start: (i, 0), end: (i, _getPageBottom(page)));
-        yield Future<Exercise?>.microtask(() async {
-          prev?.image = await _exerciseToImage(prev, document);
-          return prev?.copyWith();
-        });
+        prev.image = await _exerciseToImage(prev, document);
+        exercises.add(prev.copyWith());
       } else {
         prev.end = (i, _getPageBottom(page));
         if (i + 1 == document.pages.length) {
           prev = _offsetExercise(prev, last: true);
-          yield Future<Exercise?>.microtask(() async {
-            prev?.image = await _exerciseToImage(prev, document);
-            return prev?.copyWith();
-          });
+          prev.image = await _exerciseToImage(prev, document);
+          exercises.add(prev.copyWith());
         }
       }
     }
+    return exercises;
   }
 
   @Deprecated("cos")
@@ -223,14 +221,9 @@ class ExerciseExtractor {
     return title ?? document.getMetadata("info:Title");
   }
 
-  Stream<Exercise> getExercisesFromFile(File file) async* {
+  Future<List<Exercise>> getExercisesFromFile(File file) async {
     mupdf.Document document =
         mupdf.Document.openDocument(file.path.toJString());
-    for (Future<Exercise?> exercise in _extractExercises(document)) {
-      Exercise? done = await exercise;
-      if (done != null) {
-        yield done;
-      }
-    }
+    return await _extractExercises(document);
   }
 }

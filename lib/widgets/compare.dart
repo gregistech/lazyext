@@ -71,9 +71,9 @@ class _OriginalViewState extends State<OriginalView>
 }
 
 class ExerciseListView extends StatefulWidget {
-  final Stream<Exercise> stream;
+  final List<Exercise> exercises;
   const ExerciseListView(
-      {super.key, required this.stream, this.exercisesChanged});
+      {super.key, required this.exercises, this.exercisesChanged});
   final void Function(List<Exercise>)? exercisesChanged;
 
   @override
@@ -82,12 +82,16 @@ class ExerciseListView extends StatefulWidget {
 
 class _ExerciseListViewState extends State<ExerciseListView>
     with AutomaticKeepAliveClientMixin {
-  Future<ImageProvider?> _exerciseToImageProvider(Exercise exercise) async {
-    img.Image? image = exercise.image;
-    if (image != null) {
-      return _imageToImageProvider(image);
+  List<Future<ImageProvider?>> _exercisesToImageProviders(
+      List<Exercise> exercises) {
+    List<Future<ImageProvider?>> providers = [];
+    for (Exercise exercise in exercises) {
+      img.Image? image = exercise.image;
+      if (image != null) {
+        providers.add(_imageToImageProvider(image));
+      }
     }
-    return null;
+    return providers;
   }
 
   Future<ImageProvider?> _imageToImageProvider(img.Image image) async {
@@ -125,8 +129,9 @@ class _ExerciseListViewState extends State<ExerciseListView>
     }
   }
 
-  final List<Future<ImageProvider?>> providers = [];
-  final List<Exercise> exercises = [];
+  late final List<Exercise> exercises = widget.exercises;
+  late final List<Future<ImageProvider?>> providers =
+      _exercisesToImageProviders(widget.exercises);
   Map<int, bool> disabled = {};
 
   List<Exercise> get enabledExercises {
@@ -144,56 +149,41 @@ class _ExerciseListViewState extends State<ExerciseListView>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    return StreamBuilder<Exercise>(
-        stream: widget.stream,
-        builder: (context, snapshot) {
-          Exercise? data = snapshot.data;
-          if (data == null) {
-            return const Center(child: CircularProgressIndicator());
-          } else {
-            providers.add(_exerciseToImageProvider(data));
-            final exercisesChanged = widget.exercisesChanged;
-            if (exercisesChanged != null) {
-              exercises.add(data);
-              exercisesChanged(enabledExercises);
-            }
-            return ReorderableListView.builder(
-              itemBuilder: (context, index) {
-                return ExerciseListItem(
-                  key: Key(index.toString()),
-                  provider: providers[index],
-                  onChanged: (bool change) {
-                    setState(() {
-                      disabled[index] = !change;
-                    });
-                  },
-                  value: !(disabled[index] ?? false),
-                );
-              },
-              itemCount: providers.length,
-              onReorder: (int aI, int bI) {
-                setState(() {
-                  Exercise b = exercises[bI];
-                  bool? bDisabled = disabled[bI];
-                  Future<ImageProvider?> bProvider = providers[bI];
-                  Exercise a = exercises[aI];
-                  bool? aDisabled = disabled[aI];
-                  Future<ImageProvider?> aProvider = providers[aI];
-                  exercises[bI] = a;
-                  disabled[bI] = aDisabled ?? false;
-                  providers[bI] = aProvider;
-                  exercises[aI] = b;
-                  disabled[aI] = bDisabled ?? false;
-                  providers[aI] = bProvider;
-                  final exercisesChanged = widget.exercisesChanged;
-                  if (exercisesChanged != null) {
-                    exercisesChanged(enabledExercises);
-                  }
-                });
-              },
-            );
+    return ReorderableListView.builder(
+      itemBuilder: (context, index) {
+        return ExerciseListItem(
+          key: Key(index.toString()),
+          provider: providers[index],
+          onChanged: (bool change) {
+            setState(() {
+              disabled[index] = !change;
+            });
+          },
+          value: !(disabled[index] ?? false),
+        );
+      },
+      itemCount: providers.length,
+      onReorder: (int aI, int bI) {
+        setState(() {
+          Exercise b = exercises[bI];
+          bool? bDisabled = disabled[bI];
+          Future<ImageProvider?> bProvider = providers[bI];
+          Exercise a = exercises[aI];
+          bool? aDisabled = disabled[aI];
+          Future<ImageProvider?> aProvider = providers[aI];
+          exercises[bI] = a;
+          disabled[bI] = aDisabled ?? false;
+          providers[bI] = aProvider;
+          exercises[aI] = b;
+          disabled[aI] = bDisabled ?? false;
+          providers[aI] = bProvider;
+          final exercisesChanged = widget.exercisesChanged;
+          if (exercisesChanged != null) {
+            exercisesChanged(enabledExercises);
           }
         });
+      },
+    );
   }
 
   @override
