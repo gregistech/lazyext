@@ -7,6 +7,24 @@ import 'package:uuid/uuid.dart';
 typedef Path = List<String>;
 typedef FilePath = Path;
 
+extension ToString on Path {
+  String _sanitizeDirectoryName(String input) {
+    String sanitized = input.replaceAll(RegExp(r'[^\w\s-]'), '_');
+    sanitized = sanitized.trim();
+    sanitized = sanitized.replaceAll(RegExp(r'\s+'), ' ');
+    sanitized = sanitized.replaceAll(' ', '_');
+    return sanitized;
+  }
+
+  String toSanitizedString() {
+    Path sanitized = [];
+    for (String step in this) {
+      sanitized.add(_sanitizeDirectoryName(step));
+    }
+    return sanitized.join("/");
+  }
+}
+
 abstract class Storage {
   Future<File> savePDF(Path path, PDFDocument pdf);
 }
@@ -15,21 +33,9 @@ class FileStorage implements Storage {
   final String root;
   FileStorage(this.root);
 
-  String sanitizeDirectoryName(String input) {
-    String sanitized = input.replaceAll(RegExp(r'[^\w\s-]'), '_');
-    sanitized = sanitized.trim();
-    sanitized = sanitized.replaceAll(RegExp(r'\s+'), ' ');
-    sanitized = sanitized.replaceAll(' ', '_');
-    return sanitized;
-  }
-
   @override
   Future<File> savePDF(Path path, PDFDocument pdf) async {
-    Path sanitized = [];
-    for (String step in path) {
-      sanitized.add(sanitizeDirectoryName(step));
-    }
-    Directory dir = Directory("$root/${sanitized.join("/")}");
+    Directory dir = Directory("$root/${path.toSanitizedString()}");
     await dir.create(recursive: true);
     String name = const Uuid().v4();
     String dest = "${dir.path}/$name.pdf";

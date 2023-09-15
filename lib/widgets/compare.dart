@@ -9,7 +9,7 @@ import 'package:jni/jni.dart';
 import 'package:mupdf_android/mupdf_android.dart' as mupdf;
 import 'package:pdfx/pdfx.dart';
 
-import '../pdf/extractor.dart';
+import '../pdf/mapper.dart';
 
 class OriginalView extends StatefulWidget {
   final Iterable<String> paths;
@@ -85,12 +85,12 @@ class _ExerciseListViewState extends State<ExerciseListView>
   List<Future<ImageProvider?>> _exercisesToImageProviders(
       List<Exercise> exercises) {
     List<Future<ImageProvider?>> providers = [];
-    for (Exercise exercise in exercises) {
+    /*for (Exercise exercise in exercises) {
       img.Image? image = exercise.image;
       if (image != null) {
         providers.add(_imageToImageProvider(image));
       }
-    }
+    }*/
     return providers;
   }
 

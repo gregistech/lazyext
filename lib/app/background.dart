@@ -2,14 +2,14 @@ import 'package:background_fetch/background_fetch.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:googleapis/classroom/v1.dart' hide Assignment;
-import 'dart:io';
 import 'package:googleapis/drive/v3.dart' as drive;
+import 'package:jni/jni.dart';
 import 'package:lazyext/app/android_file_storage.dart';
 import 'package:lazyext/google/classroom.dart';
 import 'package:lazyext/google/drive.dart';
 import 'package:lazyext/google/google.dart';
+import 'package:lazyext/pdf/mapper.dart';
 import 'package:lazyext/pdf/extractor.dart';
-import 'package:lazyext/pdf/merger.dart';
 import 'package:lazyext/pdf/storage.dart';
 import 'package:lazyext/widgets/assignment.dart';
 import 'package:mupdf_android/mupdf_android.dart';
@@ -213,9 +213,8 @@ class ClassroomPDFBackgroundService {
     }
   }
 
-  static Future<List<Exercise>?> assignmentToExercises(
+  static Future<PDFDocument?> assignmentToDocument(
       Drive driveApi, Assignment assignment) async {
-    ExerciseExtractor extractor = ExerciseExtractor();
     for (Material material in assignment.materials) {
       DriveFile? driveFile = material.driveFile?.driveFile;
       if (driveFile != null) {
@@ -228,8 +227,7 @@ class ClassroomPDFBackgroundService {
               String? path = await driveApi.downloadMedia(pdf,
                   "${(await getTemporaryDirectory()).path}/${const Uuid().v4()}.pdf");
               if (path != null) {
-                File file = File(path);
-                return extractor.getExercisesFromFile(file);
+                return Document.openDocument(path.toJString()).toPDFDocument();
               }
             }
           }
@@ -273,14 +271,18 @@ class ClassroomPDFBackgroundService {
             "${prefs.getString("lastAssignment") ?? ""}${course.id ?? "unknown"}:${DateTime.now().toIso8601String()},");
         List<Assignment> done = [];
         for (Assignment assignment in assignments) {
-          Merger merger = PracticeMerger();
-          List<Exercise>? exercises =
-              await assignmentToExercises(driveApi, assignment);
-          if (exercises != null) {
-            PDFDocument pdf = await merger.exercisesToPDFDocument(exercises);
-            await storage
-                ?.savePDF([course.name ?? "unknown", assignment.name], pdf);
-            done.add(assignment);
+          Extractor merger = PracticeExtractor();
+          PDFDocument? document =
+              await assignmentToDocument(driveApi, assignment);
+          if (document != null) {
+            List<Exercise> exercises =
+                await ExerciseMapper().documentToExercises(document);
+            document = await merger.exercisesToDocument(exercises);
+            if (document != null) {
+              storage?.savePDF(
+                  [course.name ?? "unknown", assignment.name], document);
+              done.add(assignment);
+            }
           }
         }
         notifications.showProcessedNotifications(done);

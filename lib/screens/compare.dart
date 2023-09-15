@@ -1,12 +1,10 @@
-import 'dart:io';
-
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_expandable_fab/flutter_expandable_fab.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jni/jni.dart';
+import 'package:lazyext/pdf/mapper.dart';
 import 'package:lazyext/pdf/extractor.dart';
-import 'package:lazyext/pdf/merger.dart';
 import 'package:lazyext/screens/screen.dart';
 import 'package:lazyext/widgets/compare.dart';
 import 'package:mupdf_android/mupdf_android.dart' hide Text;
@@ -47,9 +45,10 @@ class _CompareScreenViewState extends State<CompareScreenView>
     with AutomaticKeepAliveClientMixin {
   int index = 0;
 
-  Future<void> _mergeAndSave(Merger merger, List<Exercise> exercises) async {
+  Future<void> _mergeAndSave(Extractor merger, List<Exercise> exercises) async {
     setState(() => loading = true);
-    Future<PDFDocument> document = merger.exercisesToPDFDocument(exercises);
+    Future<PDFDocument?> document = merger.exercisesToDocument(exercises);
+    if (!context.mounted) return;
     showDialog(
         context: context,
         builder: (BuildContext context) {
@@ -62,7 +61,7 @@ class _CompareScreenViewState extends State<CompareScreenView>
                     String? dir = await FilePicker.platform.getDirectoryPath();
                     if (dir != null) {
                       String path = "$dir/${const Uuid().v4()}.pdf";
-                      (await document).save(
+                      (await document)?.save(
                           path.toJString(),
                           "compress,compress-images,garbage=compact"
                               .toJString());
@@ -74,9 +73,9 @@ class _CompareScreenViewState extends State<CompareScreenView>
                   child: const Text("Save")),
               ElevatedButton(
                   onPressed: () async {
-                    String path =
-                        "${(await getTemporaryDirectory()).path}/${const Uuid().v4()}.pdf";
-                    (await document).save(path.toJString(),
+                    String dir = (await getTemporaryDirectory()).path;
+                    String path = "$dir/${const Uuid().v4()}.pdf";
+                    (await document)?.save(path.toJString(),
                         "compress,compress-images,garbage=compact".toJString());
                     await Share.shareXFiles([XFile(path)]);
                     if (context.mounted) {
@@ -90,16 +89,19 @@ class _CompareScreenViewState extends State<CompareScreenView>
     setState(() => loading = false);
   }
 
-  final ExerciseExtractor _extractor = ExerciseExtractor();
+  final ExerciseMapper _mapper = ExerciseMapper();
 
   late var paths = widget.paths;
 
-  late Future<List<List<Exercise>>> result = (paths
-      .fold<List<Future<List<Exercise>>>>(
-          [],
-          (previousValue, path) =>
-              previousValue +
-              [_extractor.getExercisesFromFile(File(path))])).wait;
+  late Future<List<List<Exercise>>> result =
+      (paths.fold<List<Future<List<Exercise>>>>([], (previousValue, path) {
+    PDFDocument? document =
+        Document.openDocument(path.toJString()).toPDFDocument();
+    if (document != null) {
+      return previousValue + [_mapper.documentToExercises(document)];
+    }
+    return previousValue;
+  })).wait;
 
   bool loading = false;
 
@@ -128,13 +130,13 @@ class _CompareScreenViewState extends State<CompareScreenView>
                         FloatingActionButton(
                             heroTag: "practice",
                             onPressed: () {
-                              _mergeAndSave(PracticeMerger(), exercises);
+                              _mergeAndSave(PracticeExtractor(), exercises);
                             },
                             child: const Icon(Icons.psychology_rounded)),
                         FloatingActionButton(
-                            heroTag: "merger",
+                            heroTag: "summary",
                             onPressed: () {
-                              _mergeAndSave(SummaryMerger(), exercises);
+                              //_mergeAndSave(SummaryMerger(), exercises);
                             },
                             child: const Icon(Icons.summarize_rounded))
                       ],
