@@ -9,20 +9,57 @@ abstract class Extractor {
   Future<PDFDocument?> exercisesToDocument(List<Exercise> exercises);
 }
 
-class PracticeExtractor implements Extractor {
-  /*void _putPatternOnBuffer(Buffer buffer, Rect pageSize, {double y = 0}) {
-    double spacing = 20;
-    double x = 0;
-    for (int i = 0; i < pageSize.x1 / spacing; i++) {
-      buffer.writeLine("q $x 0 m $x ${pageSize.y1} l h S Q".toJString());
-      x += spacing;
-    }
-    for (int i = 0; i < pageSize.y1 / spacing; i++) {
-      buffer.writeLine("q 0 $y m ${pageSize.x1} $y l h S Q".toJString());
-      y -= spacing;
-    }
-  }*/
+extension ToPixmap on Exercise {
+  Future<Pixmap> toPixmap() async {
+    RectDevice rectDevice = await ExerciseCopier().device;
+    rectDevice.beginPage();
+    Rect bounds = rectDevice.runExercise(this);
+    rectDevice.endPage();
+    Document document = Document.openDocument(rectDevice.done());
+    return document.pages.first.rectToPixmap(bounds);
+  }
+}
 
+extension Run on RectDevice {
+  Rect runExercise(Exercise exercise, {Rect? pageSize, double margin = 20}) {
+    pageSize ??= MuPDF.MEDIABOXES["A4"] ?? Rect.new1(0, 0, 595, 842);
+    List<Page> pages = exercise.document.pages
+        .sublist(exercise.start.$1, exercise.end!.$1 + 1);
+    for (int i = 0; i < pages.length; i++) {
+      Page page = pages[i];
+      double start = exercise.start.$2;
+      double end = exercise.end!.$2;
+      double offset = margin;
+      if (exercise.start.$1 != exercise.end!.$1) {
+        if (exercise.end!.$1 == i) {
+          start = 0;
+          end = exercise.end!.$2;
+          offset = lowest;
+        } else if (i == 0) {
+          end = pageSize.y1;
+        } else {
+          start = 0;
+          end = pageSize.y1;
+          offset = 0;
+        }
+      }
+      Rect filter = Rect.new1(0, start, pageSize.x1, end);
+      FindHighestInRectDevice finder = FindHighestInRectDevice();
+      page.run(finder.filterDevice(filter), Matrix.Identity(), Cookie());
+      page.run(filterDevice(filter, finder.highest - offset), Matrix.Identity(),
+          Cookie());
+    }
+    return Rect.new1(0, 0 + margin, pageSize.x1, lowest);
+  }
+}
+
+class ExerciseCopier {
+  Future<RectDevice> get device async => RectDevice.new2(
+      "${(await getTemporaryDirectory()).path}/${const Uuid().v4()}.pdf"
+          .toJString());
+}
+
+class PracticeExtractor extends ExerciseCopier implements Extractor {
   void _drawLine(Device device, Point a, Point b,
       {JArray<jfloat>? colors, double size = 1}) {
     if (colors == null) {
@@ -60,43 +97,15 @@ class PracticeExtractor implements Extractor {
 
   @override
   Future<PDFDocument?> exercisesToDocument(List<Exercise> exercises) async {
-    String path =
-        "${(await getTemporaryDirectory()).path}/${const Uuid().v4()}";
     Rect a4 = MuPDF.MEDIABOXES["A4"] ?? Rect.new1(0, 0, 595, 842);
-    RectDevice device = RectDevice.new2(path.toJString());
+    RectDevice rectDevice = await device;
     for (Exercise exercise in exercises) {
-      device.beginPage();
-      List<Page> pages = exercise.document.pages
-          .sublist(exercise.start.$1, exercise.end!.$1 + 1);
-      for (int i = 0; i < pages.length; i++) {
-        Page page = pages[i];
-        double start = exercise.start.$2;
-        double end = exercise.end!.$2;
-        double offset = 20;
-        if (exercise.start.$1 != exercise.end!.$1) {
-          if (exercise.end!.$1 == i) {
-            start = 0;
-            end = exercise.end!.$2;
-            offset = device.lowest;
-          } else if (i == 0) {
-            end = a4.y1;
-          } else {
-            start = 0;
-            end = a4.y1;
-            offset = 0;
-          }
-        }
-        Rect filter = Rect.new1(0, start, a4.x1, end);
-        FindHighestInRectDevice finder = FindHighestInRectDevice();
-        page.run(finder.filterDevice(filter), Matrix.Identity(), Cookie());
-        page.run(device.filterDevice(filter, finder.highest - offset),
-            Matrix.Identity(), Cookie());
-      }
-      _drawPattern(device.current, a4, y: device.lowest + 20);
-      device.endPage();
+      rectDevice.beginPage();
+      rectDevice.runExercise(exercise);
+      _drawPattern(rectDevice.current, a4, y: rectDevice.lowest + 20);
+      rectDevice.endPage();
     }
-    device.done();
-    return Document.openDocument(path.toJString()).toPDFDocument();
+    return Document.openDocument(rectDevice.done()).toPDFDocument();
   }
 }
 

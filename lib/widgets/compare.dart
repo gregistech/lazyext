@@ -1,13 +1,13 @@
 import 'dart:core';
-import 'dart:typed_data';
-import 'dart:ui' as ui;
-
-import 'packagE:image/image.dart' as img;
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:jni/jni.dart';
+import 'package:lazyext/pdf/extractor.dart';
 import 'package:mupdf_android/mupdf_android.dart' as mupdf;
+import 'package:path_provider/path_provider.dart';
 import 'package:pdfx/pdfx.dart';
+import 'package:uuid/uuid.dart';
 
 import '../pdf/mapper.dart';
 
@@ -85,48 +85,18 @@ class _ExerciseListViewState extends State<ExerciseListView>
   List<Future<ImageProvider?>> _exercisesToImageProviders(
       List<Exercise> exercises) {
     List<Future<ImageProvider?>> providers = [];
-    /*for (Exercise exercise in exercises) {
-      img.Image? image = exercise.image;
-      if (image != null) {
-        providers.add(_imageToImageProvider(image));
-      }
-    }*/
+    for (Exercise exercise in exercises) {
+      providers.add(_exerciseToImageProvider(exercise));
+    }
     return providers;
   }
 
-  Future<ImageProvider?> _imageToImageProvider(img.Image image) async {
-    if (image.format != img.Format.uint8 || image.numChannels != 4) {
-      final cmd = img.Command()
-        ..image(image)
-        ..convert(format: img.Format.uint8, numChannels: 4);
-      final rgba8 = await cmd.getImageThread();
-      if (rgba8 != null) {
-        image = rgba8;
-      }
-    }
-
-    ui.ImmutableBuffer buffer =
-        await ui.ImmutableBuffer.fromUint8List(image.toUint8List());
-
-    ui.ImageDescriptor id = ui.ImageDescriptor.raw(buffer,
-        height: image.height,
-        width: image.width,
-        pixelFormat: ui.PixelFormat.rgba8888);
-
-    ui.Codec codec = await id.instantiateCodec(
-        targetHeight: image.height, targetWidth: image.width);
-
-    ui.FrameInfo fi = await codec.getNextFrame();
-    ui.Image uiImage = fi.image;
-
-    ByteData? byteData =
-        await uiImage.toByteData(format: ui.ImageByteFormat.png);
-
-    if (byteData != null) {
-      return MemoryImage(byteData.buffer.asUint8List());
-    } else {
-      return null;
-    }
+  Future<ImageProvider?> _exerciseToImageProvider(Exercise exercise) async {
+    mupdf.Pixmap pixmap = await exercise.toPixmap();
+    String path =
+        "${(await getTemporaryDirectory()).path}/${const Uuid().v4()}.png";
+    pixmap.saveAsPNG(path.toJString());
+    return FileImage(File(path));
   }
 
   late final List<Exercise> exercises = widget.exercises;
@@ -231,7 +201,11 @@ class _ExerciseListItemState extends State<ExerciseListItem> {
           if (provider == null) {
             return tile(const Center(child: CircularProgressIndicator()));
           } else {
-            return tile(Image(image: provider));
+            return tile(ColorFiltered(
+              colorFilter:
+                  const ColorFilter.mode(Colors.white, BlendMode.color),
+              child: Image(image: provider),
+            ));
           }
         });
   }
