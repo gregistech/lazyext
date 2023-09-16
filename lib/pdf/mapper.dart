@@ -17,7 +17,7 @@ class Exercise {
 
 class ExerciseMapper {
   RegExp titleRegex = RegExp(r"^.*\d{2}\.\d{2}\..*$");
-  RegExp exerciseRegex = RegExp(r"^[1-9]\d*\.");
+  RegExp exerciseRegex = RegExp(r"^(0|[1-9]\d*)\.");
   double offsetStart = -20;
   double offsetEnd = -25;
 
