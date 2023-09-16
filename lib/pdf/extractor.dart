@@ -65,17 +65,35 @@ class PracticeExtractor implements Extractor {
     Rect a4 = MuPDF.MEDIABOXES["A4"] ?? Rect.new1(0, 0, 595, 842);
     RectDevice device = RectDevice.new2(path.toJString());
     for (Exercise exercise in exercises) {
-      if (exercise.start.$1 == exercise.end!.$1) {
-        device.beginPage();
+      device.beginPage();
+      List<Page> pages = exercise.document.pages
+          .sublist(exercise.start.$1, exercise.end!.$1 + 1);
+      for (int i = 0; i < pages.length; i++) {
+        Page page = pages[i];
+        double start = exercise.start.$2;
+        double end = exercise.end!.$2;
+        double offset = 20;
+        if (exercise.start.$1 != exercise.end!.$1) {
+          if (exercise.end!.$1 == i) {
+            start = 0;
+            end = exercise.end!.$2;
+            offset = device.lowest;
+          } else if (i == 0) {
+            end = a4.y1;
+          } else {
+            start = 0;
+            end = a4.y1;
+            offset = 0;
+          }
+        }
+        Rect filter = Rect.new1(0, start, a4.x1, end);
         FindHighestInRectDevice finder = FindHighestInRectDevice();
-        Page page = exercise.document.pages[exercise.start.$1];
-        Rect filter = Rect.new1(0, exercise.start.$2, a4.x1, exercise.end!.$2);
         page.run(finder.filterDevice(filter), Matrix.Identity(), Cookie());
-        page.run(device.filterDevice(filter, finder.highest - 20),
+        page.run(device.filterDevice(filter, finder.highest - offset),
             Matrix.Identity(), Cookie());
-        _drawPattern(device.current, a4, y: device.lowest + 20);
-        device.endPage();
       }
+      _drawPattern(device.current, a4, y: device.lowest + 20);
+      device.endPage();
     }
     device.done();
     return Document.openDocument(path.toJString()).toPDFDocument();
