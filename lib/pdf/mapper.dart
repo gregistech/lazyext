@@ -18,8 +18,8 @@ class Exercise {
 class ExerciseMapper {
   RegExp titleRegex = RegExp(r"^.*\d{2}\.\d{2}\..*$");
   RegExp exerciseRegex = RegExp(r"^[1-9]\d*\.");
-  double offsetStart = -10;
-  double offsetEnd = -5;
+  double offsetStart = -20;
+  double offsetEnd = -25;
 
   double _getPageBottom(mupdf.Page page) {
     return page.getBounds1().y1;

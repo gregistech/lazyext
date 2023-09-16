@@ -23,13 +23,15 @@ class PracticeExtractor implements Extractor {
     }
   }*/
 
-  void _drawLine(Device device, Point a, Point b) {
-    JArray<jfloat> colors = JArray(jfloat.type, 4);
-    colors[0] = 0;
-    colors[1] = 0;
-    colors[2] = 0;
-    colors[3] = 1;
-    double size = 1;
+  void _drawLine(Device device, Point a, Point b,
+      {JArray<jfloat>? colors, double size = 1}) {
+    if (colors == null) {
+      colors = JArray(jfloat.type, 4);
+      colors[0] = 0;
+      colors[1] = 0;
+      colors[2] = 0;
+      colors[3] = 1;
+    }
     Path path = Path();
     path.moveTo(a.x, a.y);
     path.lineTo(b.x, b.y);
@@ -65,12 +67,13 @@ class PracticeExtractor implements Extractor {
     for (Exercise exercise in exercises) {
       if (exercise.start.$1 == exercise.end!.$1) {
         device.beginPage();
-        exercise.document.pages[exercise.start.$1].run(
-            device.filterDevice(
-                Rect.new1(0, exercise.start.$2, a4.x1, exercise.end!.$2)),
-            Matrix.Identity(),
-            Cookie());
-        _drawPattern(device.current, a4);
+        FindHighestInRectDevice finder = FindHighestInRectDevice();
+        Page page = exercise.document.pages[exercise.start.$1];
+        Rect filter = Rect.new1(0, exercise.start.$2, a4.x1, exercise.end!.$2);
+        page.run(finder.filterDevice(filter), Matrix.Identity(), Cookie());
+        page.run(device.filterDevice(filter, finder.highest - 20),
+            Matrix.Identity(), Cookie());
+        _drawPattern(device.current, a4, y: device.lowest + 20);
         device.endPage();
       }
     }
