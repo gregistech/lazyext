@@ -46,8 +46,19 @@ class _OriginalViewState extends State<OriginalView>
           Text(e.title),
         ],
       )),
-      PdfView(
-          controller: PdfController(document: PdfDocument.openData(e.bytes)))
+      FutureBuilder(
+        future: e.temporaryPath,
+        builder: (BuildContext context, AsyncSnapshot<String> snapshot) {
+          String? data = snapshot.data;
+          if (data == null) {
+            return const Center(child: CircularProgressIndicator());
+          } else {
+            return PdfView(
+                controller:
+                    PdfController(document: PdfDocument.openFile(data)));
+          }
+        },
+      )
     ));
   }));
 

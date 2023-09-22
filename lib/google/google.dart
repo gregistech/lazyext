@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_appauth/flutter_appauth.dart';
 import 'package:googleapis/oauth2/v2.dart';
 import 'package:googleapis_auth/googleapis_auth.dart';
@@ -33,6 +34,7 @@ class GoogleApi<A> {
     A? current = await api;
     if (current != null) {
       try {
+        // FIXME: [ClientException]/[HandshakeException] if we lose connection midway
         return await request(current);
       } on AccessDeniedException catch (e) {
         if (e.message.contains("invalid_token")) {
@@ -355,7 +357,12 @@ class UserGoogleAccountSource implements GoogleAccountSource {
     AuthorizationTokenRequest request = AuthorizationTokenRequest(
         clientId, "com.example.lazyext:/oauthredirect",
         scopes: scopes.toList(), issuer: googleIssuer);
-    return lock.protect(() => _auth.authorizeAndExchangeCode(request));
+    try {
+      return await lock
+          .protect(() async => await _auth.authorizeAndExchangeCode(request));
+    } on PlatformException {
+      return null;
+    }
   }
 
   Future<GoogleAccount?> forceSignIn() async {
