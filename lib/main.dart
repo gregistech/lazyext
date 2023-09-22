@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart' hide Material;
-import 'package:googleapis/classroom/v1.dart' hide Assignment;
 import 'package:lazyext/app/background.dart';
+import 'package:lazyext/app/document_source.dart';
 import 'package:lazyext/app/drawer_provider.dart';
 import 'package:lazyext/app/dynamic_color_scheme.dart';
 import 'package:lazyext/app/theme.dart';
 import 'package:lazyext/google/cached_teacher.dart';
+import 'package:lazyext/google/oauth.dart';
+import 'package:lazyext/screens/documents.dart';
 import 'package:lazyext/screens/googlesignin.dart';
 import 'package:lazyext/screens/monitor.dart';
 import 'package:lazyext/screens/settings.dart';
 import 'package:lazyext/screens/storageroot.dart';
 import 'package:lazyext/widgets/drawer.dart';
+import 'package:mupdf_android/mupdf_android.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -18,8 +21,6 @@ import 'google/classroom.dart';
 import 'google/drive.dart';
 import 'google/google.dart';
 import 'screens/compare.dart';
-import 'screens/courses.dart';
-import 'screens/assignments.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -44,7 +45,7 @@ class _MainWidgetState extends State<MainWidget> {
   }
 
   late final _router = GoRouter(
-    initialLocation: widget.action == null ? "/courses" : "/settings",
+    initialLocation: widget.action == null ? "/sources" : "/settings",
     routes: [
       ShellRoute(
           builder: (BuildContext context, GoRouterState state, Widget child) {
@@ -54,17 +55,20 @@ class _MainWidgetState extends State<MainWidget> {
             );
           },
           routes: [
-            GoRoute(path: "/", redirect: (_, __) => "/courses"),
+            GoRoute(path: "/", redirect: (_, __) => "/sources"),
             GoRoute(
-                path: '/courses',
-                builder: (context, state) => const CoursesScreen(),
-                routes: [
-                  GoRoute(
-                    path: 'assignments',
-                    builder: (context, state) =>
-                        AssignmentsScreen(course: state.extra as Course),
-                  ),
-                ]),
+                path: '/sources',
+                builder: (context, state) {
+                  DocumentEntity? data = state.extra as DocumentEntity?;
+                  data ??= ClassroomRootDocumentEntity(
+                      null,
+                      Provider.of<Classroom>(context, listen: false),
+                      Provider.of<CachedTeacherProvider>(context,
+                          listen: false),
+                      Provider.of<Drive>(context, listen: false),
+                      Provider.of<OAuth>(context, listen: false));
+                  return DocumentsScreen(entity: data);
+                }),
             GoRoute(
                 path: "/settings",
                 builder: (context, state) =>
@@ -84,11 +88,12 @@ class _MainWidgetState extends State<MainWidget> {
       GoRoute(
           path: '/compare',
           builder: (context, state) {
-            List<String>? extra = state.extra as List<String>?;
+            Iterable<PDFDocument>? extra =
+                state.extra as Iterable<PDFDocument>?;
             if (extra == null) {
               return const Placeholder();
             } else {
-              return CompareScreen(path: extra);
+              return CompareScreen(documents: extra);
             }
           }),
     ],
@@ -111,7 +116,11 @@ class _MainWidgetState extends State<MainWidget> {
               update: (_, classroom, __) => CachedTeacherProvider(classroom)),
           ListenableProxyProvider<Google, Drive>(
               update: (_, google, __) => Drive(google)),
+          ListenableProxyProvider<Google, OAuth>(
+              update: (_, google, __) => OAuth(google)),
           ChangeNotifierProvider<ThemeProvider>(create: (_) => ThemeProvider()),
+          ChangeNotifierProvider<DocumentSelectionProvider>(
+              create: (_) => DocumentSelectionProvider()),
           ChangeNotifierProvider<DrawerProvider>(
               create: (_) => DrawerProvider())
         ],

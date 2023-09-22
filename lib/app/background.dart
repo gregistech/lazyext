@@ -5,14 +5,15 @@ import 'package:googleapis/classroom/v1.dart' hide Assignment;
 import 'package:googleapis/drive/v3.dart' as drive;
 import 'package:jni/jni.dart';
 import 'package:lazyext/app/android_file_storage.dart';
+import 'package:lazyext/app/document_source.dart';
+import 'package:lazyext/google/cached_teacher.dart';
 import 'package:lazyext/google/classroom.dart';
 import 'package:lazyext/google/drive.dart';
 import 'package:lazyext/google/google.dart';
 import 'package:lazyext/pdf/mapper.dart';
 import 'package:lazyext/pdf/extractor.dart';
 import 'package:lazyext/pdf/storage.dart';
-import 'package:lazyext/widgets/assignment.dart';
-import 'package:mupdf_android/mupdf_android.dart';
+import 'package:mupdf_android/mupdf_android.dart' as mupdf;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
@@ -71,17 +72,17 @@ class ClassroomPDFNotifications {
     }
   }
 
-  Future<void> _showProcessedNotification(Assignment assignment) async {
+  Future<void> _showProcessedNotification(Document document) async {
     const NotificationDetails details = NotificationDetails(
         android: AndroidNotificationDetails("processed", "processed",
             importance: Importance.high));
-    await _plugin.show(
-        assignment.hashCode, "Processed assignment", assignment.name, details);
+    await _plugin.show(document.hashCode, "Processed assignment",
+        await document.title, details);
   }
 
-  Future<void> showProcessedNotifications(List<Assignment> assignments) async {
-    for (Assignment assignment in assignments) {
-      await _showProcessedNotification(assignment);
+  Future<void> showProcessedNotifications(List<Document> documents) async {
+    for (Document document in documents) {
+      await _showProcessedNotification(document);
     }
   }
 
@@ -167,29 +168,47 @@ class ClassroomPDFBackgroundService {
     return null;
   }
 
-  static List<Assignment> combineIntoAssignments(
-      List<CourseWork> courseWork, List<Announcement> announcements) {
-    List<Assignment> assignments = [];
+  static Future<List<Document>> combineIntoAssignments(
+      Classroom classroom,
+      Drive drive,
+      CachedTeacherProvider provider,
+      Course course,
+      List<CourseWork> courseWork,
+      List<Announcement> announcements) async {
+    List<Document> assignments = [];
     for (Announcement announcement in announcements) {
-      assignments.add(Assignment.fromAnnouncement(announcement));
+      /*assignments.addAll((await Assignment.fromAnnouncement(announcement)
+              .toDocumentEntity(classroom, drive, provider, course)
+              .entities
+              .toList())
+          .whereType<Document>());*/
     }
     for (CourseWork elem in courseWork) {
-      assignments.add(Assignment.fromCourseWork(elem));
+      /*assignments.addAll((await Assignment.fromCourseWork(elem)
+              .toDocumentEntity(classroom, drive, provider, course)
+              .entities
+              .toList())
+          .whereType<Document>());*/
     }
     return assignments;
   }
 
-  static Future<List<Assignment>> getNewestAssignments(
-      Classroom classroom, Course course) async {
+  static Future<List<Document>> getNewestAssignments(Classroom classroom,
+      Drive drive, CachedTeacherProvider provider, Course course) async {
     List<Announcement> announcements =
         (await classroom.getAnnouncements(course, pageSize: 1))?.$1 ?? [];
     List<CourseWork> courseWork =
         (await classroom.getCourseWork(course, pageSize: 1))?.$1 ?? [];
-    return combineIntoAssignments(courseWork, announcements);
+    return combineIntoAssignments(
+        classroom, drive, provider, course, courseWork, announcements);
   }
 
-  static Future<List<Assignment>> getCutOffynamicAssignments(
-      Classroom classroom, Course course, String cutoffDate) async {
+  static Future<List<Document>> getCutOffynamicAssignments(
+      Classroom classroom,
+      Drive drive,
+      Course course,
+      CachedTeacherProvider provider,
+      String cutoffDate) async {
     List<Announcement> announcements = await classroom.getAll((
             {int pageSize = 20, String? token}) async =>
         classroom.getAnnouncements(course,
@@ -198,22 +217,28 @@ class ClassroomPDFBackgroundService {
             {int pageSize = 20, String? token}) async =>
         classroom.getCourseWork(course,
             pageSize: pageSize, token: token, cutoffDate: cutoffDate));
-    return combineIntoAssignments(courseWork, announcements);
+    return combineIntoAssignments(
+        classroom, drive, provider, course, courseWork, announcements);
   }
 
-  static Future<List<Assignment>> getTargetAssignments(
-      SharedPreferences prefs, Classroom classroom, Course course) async {
+  static Future<List<Document>> getTargetAssignments(
+      SharedPreferences prefs,
+      Classroom classroom,
+      Drive drive,
+      CachedTeacherProvider provider,
+      Course course) async {
     String? lastAssignment = RegExp("specific_string:[^,]+,")
         .firstMatch(prefs.getString("lastAssignment") ?? "")
         ?.group(0);
     if (lastAssignment == null) {
-      return getNewestAssignments(classroom, course);
+      return getNewestAssignments(classroom, drive, provider, course);
     } else {
-      return getCutOffynamicAssignments(classroom, course, lastAssignment);
+      return getCutOffynamicAssignments(
+          classroom, drive, course, provider, lastAssignment);
     }
   }
 
-  static Future<PDFDocument?> assignmentToDocument(
+  static Future<mupdf.PDFDocument?> assignmentToDocument(
       Drive driveApi, Assignment assignment) async {
     for (Material material in assignment.materials) {
       DriveFile? driveFile = material.driveFile?.driveFile;
@@ -227,7 +252,8 @@ class ClassroomPDFBackgroundService {
               String? path = await driveApi.downloadMedia(pdf,
                   "${(await getTemporaryDirectory()).path}/${const Uuid().v4()}.pdf");
               if (path != null) {
-                return Document.openDocument(path.toJString()).toPDFDocument();
+                return mupdf.Document.openDocument(path.toJString())
+                    .toPDFDocument();
               }
             }
           }
@@ -256,32 +282,33 @@ class ClassroomPDFBackgroundService {
     Google google = Google(clientId: clientId);
     Classroom classroom = Classroom(google);
     Drive driveApi = Drive(google);
+    CachedTeacherProvider provider = CachedTeacherProvider(classroom);
     SharedPreferences prefs = await SharedPreferences.getInstance();
 
     List<Course>? courses = await getMonitoredCourses(prefs, classroom);
     if (courses != null) {
       for (Course course in courses) {
-        List<Assignment> assignments =
-            await getTargetAssignments(prefs, classroom, course);
+        List<Document> documents = await getTargetAssignments(
+            prefs, classroom, driveApi, provider, course);
         prefs.setString(
             "lastAssignment",
             (prefs.getString("lastAssignment") ?? "")
                 .replaceAll(RegExp("[^:]+:[^,]+,"), ""));
         prefs.setString("lastAssignment",
             "${prefs.getString("lastAssignment") ?? ""}${course.id ?? "unknown"}:${DateTime.now().toIso8601String()},");
-        List<Assignment> done = [];
-        for (Assignment assignment in assignments) {
+        List<Document> done = [];
+        for (Document document in documents) {
           Extractor merger = PracticeExtractor();
-          PDFDocument? document =
-              await assignmentToDocument(driveApi, assignment);
-          if (document != null) {
+          mupdf.PDFDocument? pdf = await document.document;
+          if (pdf != null) {
             List<Exercise> exercises =
-                await ExerciseMapper().documentToExercises(document);
-            document = await merger.exercisesToDocument(exercises);
-            if (document != null) {
+                await ExerciseMapper().documentToExercises(pdf);
+            mupdf.PDFDocument? merged =
+                await merger.exercisesToDocument(exercises);
+            if (merged != null) {
               storage?.savePDF(
-                  [course.name ?? "unknown", assignment.name], document);
-              done.add(assignment);
+                  [course.name ?? "unknown", await document.title], merged);
+              done.add(document);
             }
           }
         }

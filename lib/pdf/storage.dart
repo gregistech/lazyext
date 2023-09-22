@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:jni/jni.dart';
-import 'package:mupdf_android/mupdf_android.dart';
+import 'package:mupdf_android/mupdf_android.dart' hide File;
 import 'package:uuid/uuid.dart';
 
 typedef Path = List<String>;

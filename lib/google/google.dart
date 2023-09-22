@@ -7,6 +7,7 @@ import 'package:googleapis_auth/googleapis_auth.dart';
 import 'package:http/http.dart';
 import 'package:googleapis_auth/googleapis_auth.dart' as gapis;
 import 'package:lazyext/google/oauth.dart';
+import 'package:mutex/mutex.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // See https://github.com/dart-lang/sdk/issues/30074, come on...
@@ -66,19 +67,26 @@ class GoogleApi<A> {
         (A api) => Function.apply(request(api), positional, named));
   }
 
+  Stream<R> stream<R>(
+      Future<(List<R>, String?)?> Function({String? token, int pageSize})
+          request,
+      {int pageSize = 20}) async* {
+    String? lastToken;
+    (List<R>, String?)? results;
+    do {
+      lastToken = results?.$2;
+      results = await request(token: lastToken, pageSize: pageSize);
+      for (R result in results?.$1 ?? []) {
+        yield result;
+      }
+    } while (results?.$2 != lastToken || results?.$1.length == pageSize);
+  }
+
   Future<List<R>> getAll<R>(
       Future<(List<R>, String?)?> Function({String? token, int pageSize})
           request,
       {int pageSize = 20}) async {
-    List<R> elems = [];
-    String? lastToken;
-    (List<R>, String?)? result;
-    do {
-      lastToken = result?.$2;
-      result = await request(token: lastToken, pageSize: pageSize);
-      elems.addAll(result?.$1 ?? []);
-    } while (result?.$2 != lastToken || result?.$1.length == pageSize);
-    return elems;
+    return stream(request, pageSize: pageSize).toList();
   }
 }
 
@@ -331,6 +339,8 @@ class UserGoogleAccountSource implements GoogleAccountSource {
   late final Google _google;
   late final OAuth _oauth = OAuth(_google);
 
+  final Mutex lock = Mutex();
+
   final String clientId;
 
   final Set<String> scopes = {
@@ -340,12 +350,12 @@ class UserGoogleAccountSource implements GoogleAccountSource {
 
   UserGoogleAccountSource(this.clientId, this._google);
 
-  static Future<AuthorizationTokenResponse?> _signIn(
+  Future<AuthorizationTokenResponse?> _signIn(
       String clientId, Set<String> scopes) async {
     AuthorizationTokenRequest request = AuthorizationTokenRequest(
         clientId, "com.example.lazyext:/oauthredirect",
         scopes: scopes.toList(), issuer: googleIssuer);
-    return (await _auth.authorizeAndExchangeCode(request));
+    return lock.protect(() => _auth.authorizeAndExchangeCode(request));
   }
 
   Future<GoogleAccount?> forceSignIn() async {
@@ -375,9 +385,9 @@ class UserGoogleAccountSource implements GoogleAccountSource {
 
   @override
   Future<void> logOut() async {
-    _auth.endSession(EndSessionRequest(
+    lock.protect(() async => _auth.endSession(EndSessionRequest(
         idTokenHint: (await account)?.credentials.idToken,
-        issuer: googleIssuer));
+        issuer: googleIssuer)));
   }
 
   @override
@@ -394,7 +404,7 @@ class UserGoogleAccountSource implements GoogleAccountSource {
         String? idToken = response.idToken;
         if (idToken != null) {
           Userinfo? info =
-              await _oauth.getUserInfo(idToken, client: credentials.toClient());
+              await _oauth.getUserInfo(client: credentials.toClient());
           if (info != null) {
             return GoogleAccount.fromRemote(info, credentials);
           }
@@ -431,7 +441,7 @@ extension AccountToClient on AccessCredentials {
   Future<GoogleAccount?> toAccount(OAuth oauth) async {
     String? token = idToken;
     if (token != null) {
-      Userinfo? info = await oauth.getUserInfo(token, client: toClient());
+      Userinfo? info = await oauth.getUserInfo(client: toClient());
       if (info != null) {
         return GoogleAccount.fromRemote(info, this);
       }

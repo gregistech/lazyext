@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:googleapis/classroom/v1.dart';
 import 'package:googleapis/drive/v3.dart';
 import 'package:http/http.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:uuid/uuid.dart';
 
 import 'google.dart';
 
@@ -43,6 +45,21 @@ class Drive extends GoogleApi<DriveApi> with ChangeNotifier {
     io.IOSink sink = io.File(path).openWrite(mode: io.FileMode.write);
     await media.stream.pipe(sink);
     return path;
+  }
+
+  Future<String?> downloadDriveFileAsPdf(DriveFile driveFile) async {
+    File? file = await driveFileToFile(driveFile);
+    if (file != null) {
+      File? gdoc = await fileToGoogleDoc(file);
+      if (gdoc != null) {
+        Media? media = await fileToPdf(gdoc);
+        if (media != null) {
+          return downloadMedia(media,
+              "${(await getTemporaryDirectory()).path}/${const Uuid().v4()}.pdf");
+        }
+      }
+    }
+    return null;
   }
 
   Future<File?> driveFileToFile(DriveFile driveFile) async {

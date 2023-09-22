@@ -13,8 +13,8 @@ import 'package:share_plus/share_plus.dart';
 import 'package:uuid/uuid.dart';
 
 class CompareScreen extends StatelessWidget {
-  final Iterable<String> path;
-  const CompareScreen({super.key, required this.path});
+  final Iterable<PDFDocument> documents;
+  const CompareScreen({super.key, required this.documents});
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +23,11 @@ class CompareScreen extends StatelessWidget {
       Tab(icon: Text("Merged"))
     ];
     return DefaultTabController(
-        length: tabs.length, child: CompareScreenView(tabs: tabs, paths: path));
+        length: tabs.length,
+        child: CompareScreenView(
+          tabs: tabs,
+          documents: documents,
+        ));
   }
 }
 
@@ -31,11 +35,11 @@ class CompareScreenView extends StatefulWidget {
   const CompareScreenView({
     super.key,
     required this.tabs,
-    required this.paths,
+    required this.documents,
   });
 
   final List<Tab> tabs;
-  final Iterable<String> paths;
+  final Iterable<PDFDocument> documents;
 
   @override
   State<CompareScreenView> createState() => _CompareScreenViewState();
@@ -91,18 +95,12 @@ class _CompareScreenViewState extends State<CompareScreenView>
 
   final ExerciseMapper _mapper = ExerciseMapper();
 
-  late var paths = widget.paths;
-
-  late Future<List<List<Exercise>>> result =
-      (paths.fold<List<Future<List<Exercise>>>>([], (previousValue, path) {
-    PDFDocument? document =
-        Document.openDocument(path.toJString()).toPDFDocument();
-    if (document != null) {
-      return previousValue + [_mapper.documentToExercises(document)];
-    }
-    return previousValue;
+  late Future<List<List<Exercise>>> result = (documents
+      .fold<List<Future<List<Exercise>>>>([], (previousValue, document) {
+    return previousValue + [_mapper.documentToExercises(document)];
   })).wait;
 
+  late List<PDFDocument> documents = widget.documents.toList();
   bool loading = false;
 
   @override
@@ -162,8 +160,8 @@ class _CompareScreenViewState extends State<CompareScreenView>
         ),
         child: TabBarView(children: [
           OriginalView(
-            paths: paths,
-            onPathsChange: (p0) => paths = p0,
+            documents: documents,
+            onDocumentsChange: (p0) => documents = p0,
           ),
           FutureBuilder<List<List<Exercise>>>(
               future: result,

@@ -12,10 +12,10 @@ import 'package:uuid/uuid.dart';
 import '../pdf/mapper.dart';
 
 class OriginalView extends StatefulWidget {
-  final Iterable<String> paths;
-  final void Function(List<String>) onPathsChange;
+  final Iterable<mupdf.PDFDocument> documents;
+  final void Function(List<mupdf.PDFDocument>) onDocumentsChange;
   const OriginalView(
-      {super.key, required this.paths, required this.onPathsChange});
+      {super.key, required this.documents, required this.onDocumentsChange});
 
   @override
   State<OriginalView> createState() => _OriginalViewState();
@@ -23,30 +23,33 @@ class OriginalView extends StatefulWidget {
 
 class _OriginalViewState extends State<OriginalView>
     with AutomaticKeepAliveClientMixin {
-  late final Map<String, (Widget, Widget)> paths =
-      Map.fromEntries(widget.paths.map((e) => MapEntry(e, (
-            Tab(
-                child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Visibility(
-                  visible: widget.paths.length > 1,
-                  child: IconButton(
-                    icon: const Icon(Icons.close_outlined),
-                    onPressed: () {
-                      setState(() {
-                        paths.remove(e);
-                        widget.onPathsChange(paths.keys.toList());
-                      });
-                    },
-                  ),
-                ),
-                Text(mupdf.Document.openDocument(e.toJString()).title),
-              ],
-            )),
-            PdfView(
-                controller: PdfController(document: PdfDocument.openFile(e)))
-          ))));
+  late final String root;
+  late final Map<mupdf.PDFDocument, (Widget, Widget)> paths =
+      Map.fromEntries(widget.documents.map((e) {
+    return MapEntry(e, (
+      Tab(
+          child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Visibility(
+            visible: widget.documents.length > 1,
+            child: IconButton(
+              icon: const Icon(Icons.close_outlined),
+              onPressed: () {
+                setState(() {
+                  paths.remove(e);
+                  widget.onDocumentsChange(paths.keys.toList());
+                });
+              },
+            ),
+          ),
+          Text(e.title),
+        ],
+      )),
+      PdfView(
+          controller: PdfController(document: PdfDocument.openData(e.bytes)))
+    ));
+  }));
 
   @override
   Widget build(BuildContext context) {
