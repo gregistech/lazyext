@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart' hide Material;
+import 'package:jni/jni.dart';
 import 'package:lazyext/app/background.dart';
 import 'package:lazyext/app/document_source.dart';
 import 'package:lazyext/app/drawer_provider.dart';
@@ -12,10 +15,11 @@ import 'package:lazyext/screens/monitor.dart';
 import 'package:lazyext/screens/settings.dart';
 import 'package:lazyext/screens/storageroot.dart';
 import 'package:lazyext/widgets/drawer.dart';
-import 'package:mupdf_android/mupdf_android.dart';
+import 'package:mupdf_android/mupdf_android.dart' as mupdf;
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:share_handler/share_handler.dart';
 
 import 'google/classroom.dart';
 import 'google/drive.dart';
@@ -39,9 +43,37 @@ class MainWidget extends StatefulWidget {
 }
 
 class _MainWidgetState extends State<MainWidget> {
+  StreamSubscription? sub;
+
+  void handleSharedMedia(SharedMedia event) {
+    print("eey");
+    List<SharedAttachment>? attachments = event.attachments?.nonNulls.toList();
+    if (attachments != null) {
+      print(attachments);
+      _router.go("/compare",
+          extra: attachments
+              .map((e) => mupdf.Document.openDocument(e.path.toJString())
+                  .toPDFDocument())
+              .nonNulls);
+    }
+  }
+
   @override
-  initState() {
+  void initState() {
     super.initState();
+    final handler = ShareHandlerPlatform.instance;
+    handler
+        .getInitialSharedMedia()
+        .then((value) => value != null ? handleSharedMedia(value) : null);
+    sub = handler.sharedMediaStream.listen((event) {
+      handleSharedMedia(event);
+    });
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    sub?.cancel();
   }
 
   late final _router = GoRouter(
@@ -82,8 +114,8 @@ class _MainWidgetState extends State<MainWidget> {
       GoRoute(
           path: '/compare',
           builder: (context, state) {
-            Iterable<PDFDocument>? extra =
-                state.extra as Iterable<PDFDocument>?;
+            Iterable<mupdf.PDFDocument>? extra =
+                state.extra as Iterable<mupdf.PDFDocument>?;
             if (extra == null) {
               return const Placeholder();
             } else {

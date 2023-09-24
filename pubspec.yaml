@@ -83,6 +83,7 @@ dependencies:
   hive_flutter: ^1.1.0
   hive_generator: ^2.0.1
   path: ^1.8.3
+  share_handler: ^0.0.17
 
 dev_dependencies:
   flutter_test:
