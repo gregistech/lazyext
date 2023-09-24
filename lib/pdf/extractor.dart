@@ -106,13 +106,12 @@ class PracticeExtractor extends ExerciseCopier
 
   @override
   Future<PDFDocument?> exercisesToDocument(List<Exercise> exercises) async {
-    Rect a4 = MuPDF.MEDIABOXES["A4"] ?? Rect.new1(0, 0, 595, 842);
     RectDevice rectDevice = await device;
     double margin = 20;
     for (Exercise exercise in exercises) {
       rectDevice.beginPage();
       rectDevice.runExercise(exercise, margin: margin);
-      drawCheckerboardPattern(rectDevice.current, a4,
+      drawCheckerboardPattern(rectDevice.current, pageSize,
           y: rectDevice.lowest + margin);
       rectDevice.endPage();
     }
@@ -127,19 +126,19 @@ class SummaryExtractor extends ExerciseCopier
 
   @override
   Future<PDFDocument?> exercisesToDocument(List<Exercise> exercises) async {
-    Rect a4 = MuPDF.MEDIABOXES["A4"] ?? Rect.new1(0, 0, 595, 842);
     double margin = 20;
     RectDevice rectDevice = await device;
     double y = 0;
     rectDevice.beginPage();
     for (Exercise exercise in exercises) {
-      if (y + (exercise.end!.$2 - exercise.start.$1) > a4.y1) {
+      print(y + (exercise.end!.$2 - exercise.start.$1));
+      if (y + (exercise.end!.$2 - exercise.start.$1) > pageSize.y1) {
         rectDevice.endPage();
         rectDevice.beginPage();
         y = 0;
       }
       y += rectDevice.runExercise(exercise, margin: margin, y: y).y1;
-      drawLine(rectDevice.current, Point(0, y), Point(a4.x1, y));
+      drawLine(rectDevice.current, Point(0, y), Point(pageSize.x1, y));
     }
     rectDevice.endPage();
     return Document.openDocument(rectDevice.done()).toPDFDocument();
