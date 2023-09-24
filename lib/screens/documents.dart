@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:io';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart' hide Material;
 import 'package:go_router/go_router.dart';
 import 'package:lazyext/app/document_source.dart';
@@ -9,6 +11,7 @@ import 'package:lazyext/google/drive.dart';
 import 'package:lazyext/google/oauth.dart';
 import 'package:lazyext/screens/screen.dart';
 import 'package:mupdf_android/mupdf_android.dart' as mupdf;
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 
 class DocumentsScreen extends StatefulWidget {
@@ -31,8 +34,13 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
           Provider.of<Classroom>(context, listen: false),
           Provider.of<CachedTeacherProvider>(context, listen: false),
           Provider.of<Drive>(context, listen: false),
-          Provider.of<OAuth>(context, listen: false))
+          Provider.of<OAuth>(context, listen: false)),
     ];
+    /*FilePicker.platform.getDirectoryPath().then((value) async {
+      value ??= (await getTemporaryDirectory()).path;
+      setState(() => entities.add(
+          FileSystemDirectoryDocumentEntity(null, Directory(value ?? "/"))));
+    });*/
     current = List.from(entities);
     (int, DocumentEntity)? entity = widget.entity;
     if (entity != null) {
@@ -40,8 +48,8 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
     }
   }
 
-  late final List<DocumentEntity> entities;
-  late final List<DocumentEntity> current;
+  List<DocumentEntity> entities = [];
+  List<DocumentEntity> current = [];
 
   @override
   void didUpdateWidget(covariant DocumentsScreen oldWidget) {
@@ -63,6 +71,9 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
     }
     return ScreenWidget(
       title: "Documents",
+      actions: [
+        IconButton(onPressed: () {}, icon: const Icon(Icons.add_rounded))
+      ],
       bottom: PreferredSize(
           preferredSize: const Size.fromHeight(10),
           child: Visibility(
@@ -97,12 +108,25 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
           children: [
             TabBar(
                 tabs: entities
-                    .map((e) => FutureBuilder<String?>(
-                        future: e.title,
+                    .map((e) => FutureBuilder<List<String?>>(
+                        future: [e.title, e.subtitle].wait,
                         builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                              ConnectionState.done) {
-                            return Tab(text: snapshot.data);
+                          List<String?>? data = snapshot.data;
+                          if (data != null) {
+                            return Tab(
+                                child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Visibility(
+                                  visible: entities.length > 1,
+                                  child: IconButton(
+                                    icon: const Icon(Icons.close_outlined),
+                                    onPressed: () {},
+                                  ),
+                                ),
+                                Text(data[0] ?? "Unknown")
+                              ],
+                            ));
                           } else {
                             return const Tab(
                               child: Center(child: CircularProgressIndicator()),
@@ -215,7 +239,8 @@ class DocumentEntityListView<T> extends StatefulWidget {
       _DocumentEntityListViewState<T>();
 }
 
-class _DocumentEntityListViewState<T> extends State<DocumentEntityListView> {
+class _DocumentEntityListViewState<T> extends State<DocumentEntityListView>
+    with AutomaticKeepAliveClientMixin {
   List<DocumentEntity> entities = [];
 
   StreamSubscription? sub;
@@ -230,12 +255,14 @@ class _DocumentEntityListViewState<T> extends State<DocumentEntityListView> {
   @override
   void didUpdateWidget(DocumentEntityListView replacement) {
     super.didUpdateWidget(replacement);
-    if (widget.entity != replacement.entity) {
-      entities = [];
-      sub?.cancel();
-      sub = replacement.entity.entities
-          .listen((event) => setState(() => entities.add(event)));
-    }
+    () async {
+      if (!await widget.entity.isEqual(replacement.entity)) {
+        entities = [];
+        sub?.cancel();
+        sub = replacement.entity.entities
+            .listen((event) => setState(() => entities.add(event)));
+      }
+    }();
   }
 
   @override
@@ -246,6 +273,7 @@ class _DocumentEntityListViewState<T> extends State<DocumentEntityListView> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return ListView.builder(
       itemCount: entities.length,
       itemBuilder: (context, index) {
@@ -256,6 +284,9 @@ class _DocumentEntityListViewState<T> extends State<DocumentEntityListView> {
       },
     );
   }
+
+  @override
+  bool wantKeepAlive = true;
 }
 
 typedef DocumentSelectionMap = Map<DocumentEntity, (bool, Set<DocumentEntity>)>;

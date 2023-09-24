@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 class ScreenWidget extends StatelessWidget {
   final String title;
   final Widget child;
+  final List<Widget>? actions;
   final PreferredSizeWidget? bottom;
   final Widget? floatingActionButton;
   final FloatingActionButtonLocation? floatingActionButtonLocation;
@@ -15,7 +16,8 @@ class ScreenWidget extends StatelessWidget {
       this.bottom,
       this.floatingActionButton,
       this.floatingActionButtonLocation,
-      this.floatingActionButtonAnimator});
+      this.floatingActionButtonAnimator,
+      this.actions});
 
   @override
   Widget build(BuildContext context) {
@@ -26,6 +28,7 @@ class ScreenWidget extends StatelessWidget {
         appBar: AppBar(
             title: Text(title),
             bottom: bottom,
+            actions: actions,
             leading: Visibility(
               visible: context.canPop(),
               replacement: IconButton(

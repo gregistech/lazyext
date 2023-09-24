@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:async/async.dart';
 import 'package:googleapis/classroom/v1.dart';
 import 'package:googleapis/oauth2/v2.dart';
+import 'package:intl/intl.dart';
 import 'package:jni/jni.dart';
 import 'package:lazyext/google/cached_teacher.dart';
 import 'package:lazyext/google/classroom.dart';
@@ -10,6 +12,7 @@ import 'package:lazyext/google/drive.dart';
 import 'package:lazyext/google/oauth.dart';
 import 'package:mupdf_android/mupdf_android.dart' as mupdf;
 import 'package:uuid/uuid.dart';
+import 'package:path/path.dart' as p;
 
 extension CourseToDocumentEntity on Course {
   DocumentEntity toDocumentEntity(DocumentEntity parent, Classroom classroom,
@@ -134,7 +137,11 @@ class ClassroomRootDocumentEntity extends DocumentEntity {
   }
 
   @override
-  Future<String> get subtitle async => "Google Workspace";
+  Future<String> get subtitle async => "";
+
+  /*@override
+  Future<String> get subtitle async =>
+      (await _userinfo)?.name ?? "Unknown user";*/
 }
 
 class ClassroomCourseDocumentEntity extends DocumentEntity {
@@ -249,4 +256,50 @@ abstract class Document extends DocumentEntity {
   @override
   Future<String> get title async =>
       (await document)?.title ?? "Unknown document";
+}
+
+class FileSystemDirectoryDocumentEntity extends FileSystemDocumentEntity {
+  FileSystemDirectoryDocumentEntity(super.parent, super.entity);
+
+  Directory get dir => entity as Directory;
+
+  @override
+  Stream<DocumentEntity> get entities async* {
+    await for (FileSystemEntity entity in dir.list()) {
+      if (entity is Directory) {
+        yield FileSystemDirectoryDocumentEntity(this, entity);
+      } else if (entity is File && p.extension(entity.path) == "pdf") {
+        yield FileSystemDocument(this, entity);
+      }
+    }
+  }
+}
+
+class FileSystemDocument extends FileSystemDocumentEntity implements Document {
+  FileSystemDocument(super.parent, super.entity);
+
+  File get file => entity as File;
+
+  @override
+  Future<mupdf.PDFDocument?> get document async =>
+      mupdf.Document.openDocument(file.path.toJString()).toPDFDocument();
+
+  @override
+  Stream<DocumentEntity> get entities async* {}
+}
+
+abstract class FileSystemDocumentEntity extends DocumentEntity {
+  FileSystemDocumentEntity(super.parent, this.entity);
+
+  final FileSystemEntity entity;
+
+  @override
+  Future<String> get id async => entity.path;
+
+  @override
+  Future<String> get title async => p.basenameWithoutExtension(entity.path);
+
+  @override
+  Future<String> get subtitle async =>
+      DateFormat.yMd().format((await entity.stat()).modified);
 }
