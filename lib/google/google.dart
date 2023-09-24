@@ -81,6 +81,7 @@ class GoogleApi<A> {
       for (R result in results?.$1 ?? []) {
         yield result;
       }
+      await Future.delayed(const Duration(seconds: 10));
     } while (results?.$2 != lastToken || results?.$1.length == pageSize);
   }
 

@@ -19,13 +19,13 @@ class MainDrawer extends StatelessWidget {
           children: [
             const GoogleAccountHeader(),
             ListTile(
-              leading: const Icon(Icons.class_rounded),
-              title: const Text("Courses"),
-              selected: selected == "/courses",
+              leading: const Icon(Icons.folder_rounded),
+              title: const Text("Documents"),
+              selected: selected == "/sources",
               onTap: () {
-                context.go("/courses");
+                context.go("/sources");
                 Scaffold.of(context).closeDrawer();
-                value.selected = "/courses";
+                value.selected = "/sources";
               },
             ),
             ListTile(

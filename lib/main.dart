@@ -59,15 +59,9 @@ class _MainWidgetState extends State<MainWidget> {
             GoRoute(
                 path: '/sources',
                 builder: (context, state) {
-                  DocumentEntity? data = state.extra as DocumentEntity?;
-                  data ??= ClassroomRootDocumentEntity(
-                      null,
-                      Provider.of<Classroom>(context, listen: false),
-                      Provider.of<CachedTeacherProvider>(context,
-                          listen: false),
-                      Provider.of<Drive>(context, listen: false),
-                      Provider.of<OAuth>(context, listen: false));
-                  return DocumentsScreen(entity: data);
+                  (int, DocumentEntity)? extra =
+                      state.extra as (int, DocumentEntity)?;
+                  return DocumentsScreen(key: state.pageKey, entity: extra);
                 }),
             GoRoute(
                 path: "/settings",

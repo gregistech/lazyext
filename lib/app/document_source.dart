@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:async/async.dart';
 import 'package:googleapis/classroom/v1.dart';
+import 'package:googleapis/oauth2/v2.dart';
 import 'package:jni/jni.dart';
 import 'package:lazyext/google/cached_teacher.dart';
 import 'package:lazyext/google/classroom.dart';
@@ -81,22 +82,21 @@ class Assignment implements Comparable<Assignment> {
 
 class DriveFileDocument extends Document {
   DriveFileDocument(super.parent, this.drive, this.driveFile);
-  Drive drive;
+  final Drive drive;
 
-  DriveFile driveFile;
+  final DriveFile driveFile;
   late final Future<String?> _path = drive.downloadDriveFileAsPdf(driveFile);
 
-  mupdf.PDFDocument? _document;
+  @override
+  Future<String> get id async => driveFile.id ?? "Unknown";
+
   @override
   Future<mupdf.PDFDocument?> get document async {
-    if (_document == null) {
-      String? path = await _path;
-      if (path != null) {
-        _document =
-            mupdf.Document.openDocument(path.toJString()).toPDFDocument();
-      }
+    String? path = await _path;
+    if (path != null) {
+      return mupdf.Document.openDocument(path.toJString()).toPDFDocument();
     }
-    return _document;
+    return null;
   }
 
   @override
@@ -112,13 +112,14 @@ class DriveFileDocument extends Document {
 class ClassroomRootDocumentEntity extends DocumentEntity {
   ClassroomRootDocumentEntity(
       super.parent, this.classroom, this.provider, this.drive, this.oauth);
-  Classroom classroom;
-  OAuth oauth;
-  Drive drive;
-  CachedTeacherProvider provider;
+  final Classroom classroom;
+  final OAuth oauth;
+  final Drive drive;
+  final CachedTeacherProvider provider;
 
+  late final Future<Userinfo?> _userinfo = oauth.getUserInfo();
   @override
-  Future<String> get id async => (await oauth.getUserInfo())?.id ?? "Unknown";
+  Future<String> get id async => (await _userinfo)?.id ?? "Unknown";
 
   @override
   Future<String> get title async => "Classroom";
@@ -139,11 +140,11 @@ class ClassroomRootDocumentEntity extends DocumentEntity {
 class ClassroomCourseDocumentEntity extends DocumentEntity {
   ClassroomCourseDocumentEntity(
       super.parent, this.classroom, this.drive, this.provider, this.course);
-  Classroom classroom;
-  Drive drive;
-  CachedTeacherProvider provider;
+  final Classroom classroom;
+  final Drive drive;
+  final CachedTeacherProvider provider;
 
-  Course course;
+  final Course course;
 
   @override
   Future<String> get id async => course.id ?? "Unknown";
@@ -186,11 +187,11 @@ class ClassroomCourseDocumentEntity extends DocumentEntity {
 class ClassroomAssignmentDocumentEntity extends DocumentEntity {
   ClassroomAssignmentDocumentEntity(super.parent, this.classroom, this.drive,
       this.provider, this.course, this.assignment);
-  Classroom classroom;
-  Drive drive;
-  Course course;
-  CachedTeacherProvider provider;
-  Assignment assignment;
+  final Classroom classroom;
+  final Drive drive;
+  final Course course;
+  final CachedTeacherProvider provider;
+  final Assignment assignment;
 
   @override
   Future<String> get id async => assignment.id;
@@ -229,12 +230,15 @@ extension FutureExtension<T> on Future<T> {
 }
 
 abstract class DocumentEntity {
-  DocumentEntity(this.parent);
-  DocumentEntity? parent;
+  const DocumentEntity(this.parent);
+  final DocumentEntity? parent;
   Future<String> get id async => const Uuid().v4();
   Future<String> get title;
   Future<String> get subtitle;
   Stream<DocumentEntity> get entities;
+
+  Future<bool> isEqual(DocumentEntity other) async =>
+      (await id) == (await other.id);
 }
 
 abstract class Document extends DocumentEntity {

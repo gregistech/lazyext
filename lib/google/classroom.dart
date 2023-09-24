@@ -14,7 +14,8 @@ class Classroom extends GoogleApi<ClassroomApi> with ChangeNotifier {
     ClassroomApi.classroomCourseworkMeReadonlyScope,
     ClassroomApi.classroomRostersReadonlyScope,
     ClassroomApi.classroomProfileEmailsScope,
-    ClassroomApi.classroomProfilePhotosScope
+    ClassroomApi.classroomProfilePhotosScope,
+    ClassroomApi.classroomCourseworkStudentsScope
   };
 
   Classroom(Google google)

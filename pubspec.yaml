@@ -78,6 +78,7 @@ dependencies:
   async: ^2.11.0
   flutter_expandable_fab: ^2.0.0
   share_plus: ^7.1.0
+  equatable: ^2.0.5
 
 dev_dependencies:
   flutter_test:
