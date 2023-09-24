@@ -11,7 +11,8 @@ abstract class Extractor {
 
 extension ToPixmap on Exercise {
   Future<Pixmap> toPixmap() async {
-    RectDevice rectDevice = await ExerciseCopier().device;
+    RectDevice rectDevice =
+        await ExerciseCopier(this.document.pages.first.getBounds1()).device;
     rectDevice.beginPage();
     Rect bounds = rectDevice.runExercise(this);
     rectDevice.endPage();
@@ -21,7 +22,8 @@ extension ToPixmap on Exercise {
 }
 
 extension Run on RectDevice {
-  Rect runExercise(Exercise exercise, {Rect? pageSize, double margin = 20}) {
+  Rect runExercise(Exercise exercise,
+      {double? y, Rect? pageSize, double margin = 0}) {
     pageSize ??= MuPDF.MEDIABOXES["A4"] ?? Rect.new1(0, 0, 595, 842);
     List<Page> pages = exercise.document.pages
         .sublist(exercise.start.$1, exercise.end!.$1 + 1);
@@ -44,23 +46,24 @@ extension Run on RectDevice {
         }
       }
       Rect filter = Rect.new1(0, start, pageSize.x1, end);
-      FindHighestInRectDevice finder = FindHighestInRectDevice();
-      page.run(finder.filterDevice(filter), Matrix.Identity(), Cookie());
-      page.run(filterDevice(filter, finder.highest - offset), Matrix.Identity(),
-          Cookie());
+      page.run1(filterDevice(page, filter, y ?? 0 + offset), Matrix.Identity());
     }
     return Rect.new1(0, 0 + margin, pageSize.x1, lowest);
   }
 }
 
 class ExerciseCopier {
+  Rect pageSize;
+  ExerciseCopier(this.pageSize);
+
   Future<RectDevice> get device async => RectDevice.new2(
       "${(await getTemporaryDirectory()).path}/${const Uuid().v4()}.pdf"
-          .toJString());
+          .toJString(),
+      pageSize);
 }
 
-class PracticeExtractor extends ExerciseCopier implements Extractor {
-  void _drawLine(Device device, Point a, Point b,
+mixin PDFDraw {
+  void drawLine(Device device, Point a, Point b,
       {JArray<jfloat>? colors, double size = 1}) {
     if (colors == null) {
       colors = JArray(jfloat.type, 4);
@@ -82,59 +85,63 @@ class PracticeExtractor extends ExerciseCopier implements Extractor {
         1);
   }
 
-  void _drawPattern(Device device, Rect pageSize, {double y = 0}) {
+  void drawCheckerboardPattern(Device device, Rect pageSize, {double y = 0}) {
     double spacing = 20;
     double x = 0;
     while (x <= pageSize.x1) {
-      _drawLine(device, Point(x, y), Point(x, pageSize.y1));
+      drawLine(device, Point(x, y), Point(x, pageSize.y1));
       x += spacing;
     }
     while (y <= pageSize.y1) {
-      _drawLine(device, Point(0, y), Point(pageSize.x1, y));
+      drawLine(device, Point(0, y), Point(pageSize.x1, y));
       y += spacing;
     }
   }
+}
+
+class PracticeExtractor extends ExerciseCopier
+    with PDFDraw
+    implements Extractor {
+  PracticeExtractor(super.pageSize);
 
   @override
   Future<PDFDocument?> exercisesToDocument(List<Exercise> exercises) async {
     Rect a4 = MuPDF.MEDIABOXES["A4"] ?? Rect.new1(0, 0, 595, 842);
     RectDevice rectDevice = await device;
+    double margin = 20;
     for (Exercise exercise in exercises) {
       rectDevice.beginPage();
-      rectDevice.runExercise(exercise);
-      _drawPattern(rectDevice.current, a4, y: rectDevice.lowest + 20);
+      rectDevice.runExercise(exercise, margin: margin);
+      drawCheckerboardPattern(rectDevice.current, a4,
+          y: rectDevice.lowest + margin);
       rectDevice.endPage();
     }
     return Document.openDocument(rectDevice.done()).toPDFDocument();
   }
 }
 
-/*class SummaryMerger implements Extractor {
+class SummaryExtractor extends ExerciseCopier
+    with PDFDraw
+    implements Extractor {
+  SummaryExtractor(super.pageSize);
+
   @override
-  Future<PDFDocument> exercisesToFile(List<Exercise> exercises) async {
-    PDFDocument document = PDFDocument.new1();
-    double offset = 0;
+  Future<PDFDocument?> exercisesToDocument(List<Exercise> exercises) async {
     Rect a4 = MuPDF.MEDIABOXES["A4"] ?? Rect.new1(0, 0, 595, 842);
-    Buffer buffer = Buffer.new1();
-    PDFObject imageDict = document.newDictionary();
+    double margin = 20;
+    RectDevice rectDevice = await device;
+    double y = 0;
+    rectDevice.beginPage();
     for (Exercise exercise in exercises) {
-      img.Image? image = exercise.image;
-      if (image != null) {
-        offset += image.height;
-        if (offset > a4.y1) {
-          PDFObject resources = document.newDictionary();
-          resources.put9("XObject".toJString(), imageDict);
-          document.insertPage(-1, document.addPage(a4, 0, resources, buffer));
-          buffer = Buffer.new1();
-          offset = 0;
-        }
-        await _putExerciseImageOnBuffer(buffer, imageDict, document, a4, image,
-            offset: offset);
+      if (y + (exercise.end!.$2 - exercise.start.$1) > a4.y1) {
+        rectDevice.endPage();
+        rectDevice.beginPage();
+        y = 0;
       }
+      y += rectDevice.runExercise(exercise, margin: margin, y: y).y1;
+      drawLine(rectDevice.current, Point(0, y), Point(a4.x1, y));
     }
-    PDFObject resources = document.newDictionary();
-    resources.put9("XObject".toJString(), imageDict);
-    document.insertPage(-1, document.addPage(a4, 0, resources, buffer));
-    return document;
+    rectDevice.endPage();
+    return Document.openDocument(rectDevice.done()).toPDFDocument();
   }
-}*/
+}
