@@ -128,13 +128,21 @@ class _CompareScreenViewState extends State<CompareScreenView>
                         FloatingActionButton(
                             heroTag: "practice",
                             onPressed: () {
-                              _mergeAndSave(PracticeExtractor(), exercises);
+                              _mergeAndSave(
+                                  PracticeExtractor(exercises
+                                      .first.document.pages.first
+                                      .getBounds1()),
+                                  exercises);
                             },
                             child: const Icon(Icons.psychology_rounded)),
                         FloatingActionButton(
                             heroTag: "summary",
                             onPressed: () {
-                              //_mergeAndSave(SummaryMerger(), exercises);
+                              _mergeAndSave(
+                                  SummaryExtractor(exercises
+                                      .first.document.pages.first
+                                      .getBounds1()),
+                                  exercises);
                             },
                             child: const Icon(Icons.summarize_rounded))
                       ],

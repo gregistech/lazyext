@@ -298,11 +298,12 @@ class ClassroomPDFBackgroundService {
             "${prefs.getString("lastAssignment") ?? ""}${course.id ?? "unknown"}:${DateTime.now().toIso8601String()},");
         List<Document> done = [];
         for (Document document in documents) {
-          Extractor merger = PracticeExtractor();
           mupdf.PDFDocument? pdf = await document.document;
           if (pdf != null) {
             List<Exercise> exercises =
                 await ExerciseMapper().documentToExercises(pdf);
+            Extractor merger = PracticeExtractor(
+                exercises.first.document.pages.first.getBounds1());
             mupdf.PDFDocument? merged =
                 await merger.exercisesToDocument(exercises);
             if (merged != null) {
