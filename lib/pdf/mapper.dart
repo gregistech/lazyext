@@ -21,10 +21,6 @@ class ExerciseMapper {
   double offsetStart = -20;
   double offsetEnd = -25;
 
-  double _getPageBottom(mupdf.Page page) {
-    return page.getBounds1().y1;
-  }
-
   Exercise _offsetExercise(Exercise exercise,
       {bool first = false, bool last = false}) {
     exercise.start =
@@ -57,10 +53,14 @@ class ExerciseMapper {
       }
       if (prev == null) {
         prev = Exercise(
-            document: document, start: (i, 0), end: (i, _getPageBottom(page)));
+            document: document, start: (i, 0), end: (i, page.getBounds1().y1));
         exercises.add(prev.copyWith());
       } else {
-        prev.end = (i, _getPageBottom(page));
+        mupdf.MarkBoundsDevice device =
+            mupdf.MarkBoundsDevice.new2(page.getBounds1());
+        page.run1(
+            device.filterDevice(page.getBounds1()), mupdf.Matrix.Identity());
+        prev.end = (i, device.bounds.y1);
         if (i + 1 == document.pages.length) {
           prev = _offsetExercise(prev, last: true);
           exercises.add(prev.copyWith());

@@ -22,9 +22,7 @@ extension ToPixmap on Exercise {
 }
 
 extension Run on RectDevice {
-  Rect runExercise(Exercise exercise,
-      {double? y, Rect? pageSize, double margin = 0}) {
-    pageSize ??= MuPDF.MEDIABOXES["A4"] ?? Rect.new1(0, 0, 595, 842);
+  Rect runExercise(Exercise exercise, {double? y, double margin = 0}) {
     List<Page> pages = exercise.document.pages
         .sublist(exercise.start.$1, exercise.end!.$1 + 1);
     for (int i = 0; i < pages.length; i++) {
@@ -36,7 +34,7 @@ extension Run on RectDevice {
         if (exercise.end!.$1 == i) {
           start = 0;
           end = exercise.end!.$2;
-          offset = lowest;
+          offset = bounds.y0;
         } else if (i == 0) {
           end = pageSize.y1;
         } else {
@@ -48,7 +46,7 @@ extension Run on RectDevice {
       Rect filter = Rect.new1(0, start, pageSize.x1, end);
       page.run1(filterDevice(page, filter, y ?? 0 + offset), Matrix.Identity());
     }
-    return Rect.new1(0, 0 + margin, pageSize.x1, lowest);
+    return bounds;
   }
 }
 
@@ -110,9 +108,9 @@ class PracticeExtractor extends ExerciseCopier
     double margin = 20;
     for (Exercise exercise in exercises) {
       rectDevice.beginPage();
-      rectDevice.runExercise(exercise, margin: margin);
+      Rect bounds = rectDevice.runExercise(exercise, margin: margin);
       drawCheckerboardPattern(rectDevice.current, pageSize,
-          y: rectDevice.lowest + margin);
+          y: bounds.y1 + margin);
       rectDevice.endPage();
     }
     return Document.openDocument(rectDevice.done()).toPDFDocument();
@@ -131,13 +129,13 @@ class SummaryExtractor extends ExerciseCopier
     double y = 0;
     rectDevice.beginPage();
     for (Exercise exercise in exercises) {
-      print(y + (exercise.end!.$2 - exercise.start.$1));
+      y += margin;
       if (y + (exercise.end!.$2 - exercise.start.$1) > pageSize.y1) {
         rectDevice.endPage();
         rectDevice.beginPage();
         y = 0;
       }
-      y += rectDevice.runExercise(exercise, margin: margin, y: y).y1;
+      y = rectDevice.runExercise(exercise, margin: margin, y: y).y1 + margin;
       drawLine(rectDevice.current, Point(0, y), Point(pageSize.x1, y));
     }
     rectDevice.endPage();
