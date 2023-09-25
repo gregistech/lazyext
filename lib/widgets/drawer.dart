@@ -1,49 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_profile_picture/flutter_profile_picture.dart';
-import 'package:go_router/go_router.dart';
-import 'package:lazyext/app/drawer_provider.dart';
+import 'package:gdrawer/gdrawer.dart';
 import 'package:lazyext/google/google.dart';
 import 'package:provider/provider.dart';
-
-class MainDrawer extends StatelessWidget {
-  const MainDrawer({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Consumer<DrawerProvider>(
-      builder: (BuildContext context, DrawerProvider value, Widget? child) {
-        String selected = value.selected;
-        return Drawer(
-            child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            const GoogleAccountHeader(),
-            ListTile(
-              leading: const Icon(Icons.folder_rounded),
-              title: const Text("Documents"),
-              selected: selected == "/sources",
-              onTap: () {
-                context.go("/sources");
-                Scaffold.of(context).closeDrawer();
-                value.selected = "/sources";
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.settings),
-              title: const Text("Settings"),
-              selected: selected == "/settings",
-              onTap: () {
-                context.go("/settings");
-                Scaffold.of(context).closeDrawer();
-                value.selected = "/settings";
-              },
-            )
-          ],
-        ));
-      },
-    );
-  }
-}
 
 class GoogleAccountHeader extends StatelessWidget {
   const GoogleAccountHeader({
@@ -81,5 +40,23 @@ class GoogleAccountHeader extends StatelessWidget {
         ],
       )),
     );
+  }
+}
+
+class MainDrawer extends StatelessWidget {
+  const MainDrawer({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const GDrawer(header: GoogleAccountHeader(), children: [
+      DrawerTile(
+          title: "Documents",
+          path: "/sources",
+          icon: Icon(Icons.folder_rounded)),
+      DrawerTile(
+          title: "Settings",
+          path: "/settings",
+          icon: Icon(Icons.settings_rounded)),
+    ]);
   }
 }

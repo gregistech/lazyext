@@ -2,10 +2,10 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_expandable_fab/flutter_expandable_fab.dart';
 import 'package:go_router/go_router.dart';
+import 'package:gscreen/gscreen.dart';
 import 'package:jni/jni.dart';
 import 'package:lazyext/pdf/mapper.dart';
 import 'package:lazyext/pdf/extractor.dart';
-import 'package:lazyext/screens/screen.dart';
 import 'package:lazyext/widgets/compare.dart';
 import 'package:mupdf_android/mupdf_android.dart' hide Text;
 import 'package:path_provider/path_provider.dart';
@@ -105,7 +105,7 @@ class _CompareScreenViewState extends State<CompareScreenView>
     super.build(context);
     DefaultTabController.of(context).addListener(
         () => setState(() => index = DefaultTabController.of(context).index));
-    return ScreenWidget(
+    return GScreen(
         floatingActionButtonAnimator: FloatingActionButtonAnimator.scaling,
         floatingActionButtonLocation: ExpandableFab.location,
         floatingActionButton: index == 1

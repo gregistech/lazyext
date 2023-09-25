@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:googleapis/classroom/v1.dart';
+import 'package:gscreen/gscreen.dart';
 import 'package:lazyext/app/background.dart';
 import 'package:lazyext/google/classroom.dart';
 import 'package:lazyext/widgets/g_paginated_list_view.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-import 'screen.dart';
 
 class MonitorScreen extends StatefulWidget {
   const MonitorScreen({super.key});
@@ -18,7 +17,7 @@ class MonitorScreen extends StatefulWidget {
 class _MonitorScreenState extends State<MonitorScreen> {
   @override
   Widget build(BuildContext context) {
-    return ScreenWidget(
+    return GScreen(
       title: "Courses to fetch",
       child: GPaginatedListView<String?, Course>(
           getPage: (pageSize, token) async =>

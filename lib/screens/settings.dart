@@ -1,11 +1,10 @@
+import 'package:dynamic_theme/dynamic_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:gscreen/gscreen.dart';
 import 'package:lazyext/app/background.dart';
-import 'package:lazyext/app/theme.dart';
 import 'package:provider/provider.dart';
-
-import 'screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   final NotificationAction? action;
@@ -29,7 +28,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return ScreenWidget(
+    return GScreen(
       title: "Settings",
       child: ListView(
         children: [

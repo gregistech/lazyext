@@ -1,17 +1,13 @@
 import 'dart:async';
-import 'dart:io';
-
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart' hide Material;
 import 'package:go_router/go_router.dart';
+import 'package:gscreen/gscreen.dart';
 import 'package:lazyext/app/document_source.dart';
 import 'package:lazyext/google/cached_teacher.dart';
 import 'package:lazyext/google/classroom.dart';
 import 'package:lazyext/google/drive.dart';
 import 'package:lazyext/google/oauth.dart';
-import 'package:lazyext/screens/screen.dart';
 import 'package:mupdf_android/mupdf_android.dart' as mupdf;
-import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 
 class DocumentsScreen extends StatefulWidget {
@@ -69,7 +65,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
         entity: current[i],
       ));
     }
-    return ScreenWidget(
+    return GScreen(
       title: "Documents",
       actions: [
         IconButton(onPressed: () {}, icon: const Icon(Icons.add_rounded))

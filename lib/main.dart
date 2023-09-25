@@ -1,12 +1,11 @@
 import 'dart:async';
 
+import 'package:dynamic_theme/dynamic_theme.dart';
 import 'package:flutter/material.dart' hide Material;
+import 'package:gdrawer/gdrawer.dart';
 import 'package:jni/jni.dart';
 import 'package:lazyext/app/background.dart';
 import 'package:lazyext/app/document_source.dart';
-import 'package:lazyext/app/drawer_provider.dart';
-import 'package:lazyext/app/dynamic_color_scheme.dart';
-import 'package:lazyext/app/theme.dart';
 import 'package:lazyext/google/cached_teacher.dart';
 import 'package:lazyext/google/oauth.dart';
 import 'package:lazyext/screens/documents.dart';
@@ -46,10 +45,8 @@ class _MainWidgetState extends State<MainWidget> {
   StreamSubscription? sub;
 
   void handleSharedMedia(SharedMedia event) {
-    print("eey");
     List<SharedAttachment>? attachments = event.attachments?.nonNulls.toList();
     if (attachments != null) {
-      print(attachments);
       _router.go("/compare",
           extra: attachments
               .map((e) => mupdf.Document.openDocument(e.path.toJString())
@@ -148,7 +145,7 @@ class _MainWidgetState extends State<MainWidget> {
           ChangeNotifierProvider<DocumentSelectionProvider>(
               create: (_) => DocumentSelectionProvider()),
           ChangeNotifierProvider<DrawerProvider>(
-              create: (_) => DrawerProvider())
+              create: (_) => DrawerProvider("/sources"))
         ],
         child: DynamicColorScheme(
           title: "LazyEXT",
