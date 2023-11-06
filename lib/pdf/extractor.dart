@@ -10,14 +10,18 @@ abstract class Extractor {
 }
 
 extension ToPixmap on Exercise {
-  Future<Pixmap> toPixmap() async {
+  Future<Pixmap?> toPixmap() async {
     RectDevice rectDevice =
         await ExerciseCopier(this.document.pages.first.getBounds1()).device;
     rectDevice.beginPage();
     Rect bounds = rectDevice.runExercise(this);
     rectDevice.endPage();
     Document document = Document.openDocument(rectDevice.done());
-    return document.pages.first.rectToPixmap(bounds);
+    try {
+      return document.pages.first.rectToPixmap(bounds);
+    } on JniException {
+      return null;
+    }
   }
 }
 
@@ -109,8 +113,11 @@ class PracticeExtractor extends ExerciseCopier
     for (Exercise exercise in exercises) {
       rectDevice.beginPage();
       Rect bounds = rectDevice.runExercise(exercise, margin: margin);
-      drawCheckerboardPattern(rectDevice.current, pageSize,
-          y: bounds.y1 + margin);
+      if (bounds.y1.isFinite) {
+        // FIXME: temp fix already in place, but checkerboard not working if bounds for some reason are Infinite
+        drawCheckerboardPattern(rectDevice.current, pageSize,
+            y: bounds.y1 + margin);
+      }
       rectDevice.endPage();
     }
     return Document.openDocument(rectDevice.done()).toPDFDocument();

@@ -49,44 +49,55 @@ class _CompareScreenViewState extends State<CompareScreenView>
   Future<void> _mergeAndSave(Extractor merger, List<Exercise> exercises) async {
     setState(() => loading = true);
     Future<PDFDocument?> document = merger.exercisesToDocument(exercises);
-    if (!context.mounted) return;
-    showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: const Text("Successful merge"),
-            content: const Text("Exercises have been successfully merged."),
-            actions: [
-              ElevatedButton(
-                  onPressed: () async {
-                    String? dir = await FilePicker.platform.getDirectoryPath();
-                    if (dir != null) {
+    if ((await document) == null) {
+      if (!context.mounted) return;
+      showDialog(
+          context: context,
+          builder: (BuildContext context) => const AlertDialog(
+              icon: Icon(Icons.error_outlined), title: Text("Failed merge")));
+    } else {
+      if (!context.mounted) return;
+      showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text("Successful merge"),
+              content: const Text("Exercises have been successfully merged."),
+              actions: [
+                ElevatedButton(
+                    onPressed: () async {
+                      String? dir =
+                          await FilePicker.platform.getDirectoryPath();
+                      if (dir != null) {
+                        String path = "$dir/${const Uuid().v4()}.pdf";
+                        (await document)?.save(
+                            path.toJString(),
+                            "compress,compress-images,garbage=compact"
+                                .toJString());
+                        if (context.mounted) {
+                          context.pop();
+                        }
+                      }
+                    },
+                    child: const Text("Save")),
+                ElevatedButton(
+                    onPressed: () async {
+                      String dir = (await getTemporaryDirectory()).path;
                       String path = "$dir/${const Uuid().v4()}.pdf";
                       (await document)?.save(
                           path.toJString(),
                           "compress,compress-images,garbage=compact"
                               .toJString());
+                      await Share.shareXFiles([XFile(path)]);
                       if (context.mounted) {
                         context.pop();
                       }
-                    }
-                  },
-                  child: const Text("Save")),
-              ElevatedButton(
-                  onPressed: () async {
-                    String dir = (await getTemporaryDirectory()).path;
-                    String path = "$dir/${const Uuid().v4()}.pdf";
-                    (await document)?.save(path.toJString(),
-                        "compress,compress-images,garbage=compact".toJString());
-                    await Share.shareXFiles([XFile(path)]);
-                    if (context.mounted) {
-                      context.pop();
-                    }
-                  },
-                  child: const Text("Share")),
-            ],
-          );
-        });
+                    },
+                    child: const Text("Share")),
+              ],
+            );
+          });
+    }
     setState(() => loading = false);
   }
 

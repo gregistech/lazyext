@@ -106,11 +106,15 @@ class _ExerciseListViewState extends State<ExerciseListView>
   }
 
   Future<ImageProvider?> _exerciseToImageProvider(Exercise exercise) async {
-    mupdf.Pixmap pixmap = await exercise.toPixmap();
-    String path =
-        "${(await getTemporaryDirectory()).path}/${const Uuid().v4()}.png";
-    pixmap.saveAsPNG(path.toJString());
-    return FileImage(File(path));
+    mupdf.Pixmap? pixmap = await exercise.toPixmap();
+    if (pixmap == null) {
+      return null;
+    } else {
+      String path =
+          "${(await getTemporaryDirectory()).path}/${const Uuid().v4()}.png";
+      pixmap.saveAsPNG(path.toJString());
+      return FileImage(File(path));
+    }
   }
 
   late final List<Exercise> exercises = widget.exercises;
@@ -212,8 +216,10 @@ class _ExerciseListItemState extends State<ExerciseListItem> {
                 ],
               );
           ImageProvider? provider = snapshot.data;
-          if (provider == null) {
+          if (snapshot.connectionState != ConnectionState.done) {
             return tile(const Center(child: CircularProgressIndicator()));
+          } else if (provider == null) {
+            return tile(const Center(child: Icon(Icons.error_rounded)));
           } else {
             return tile(ColorFiltered(
               colorFilter:
